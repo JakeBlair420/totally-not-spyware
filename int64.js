@@ -132,6 +132,16 @@ Int64.fromDouble = function(d) {
     return new Int64(bytes);
 };
 
+Int64.prototype.lo = function() {
+    var b = this.bytes();
+    return b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24);
+};
+
+Int64.prototype.hi = function() {
+    var b = this.bytes();
+    return b[4] | (b[5] << 8) | (b[6] << 16) | (b[7] << 24);
+};
+
 // Convenience functions. These allocate a new Int64 to hold the result.
 
 // Return -n (two's complement)

@@ -36,13 +36,13 @@ go:
     movz x27, 0x6969
     movz x28, 0x6969
 
-    ldr x1, dlsym
+    # ldr x1, dlsym
 
-    adr x8, start
-    ldr x7, =(0x1000+OFFSET_LOAD)
-    add x0, x8, x7
-
-    ldr x7, =0x1000000
-    add x2, x8, x7
-
-    blr x0
+    # adr x8, start
+    # ldr x7, =(0x1000+OFFSET_LOAD)
+    # add x0, x8, x7
+ 
+    # ldr x7, =0x1000000
+    # add x2, x8, x7
+ 
+    # blr x0
