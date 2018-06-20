@@ -1,9 +1,8 @@
 
-const LC_SYMTAB = 0x2
+const LC_SYMTAB     = 0x2
 const LC_SEGMENT_64 = 0x19
 
-function fsyms(mem, base, want)
-{
+function fsyms(mem, base, want) {
     var stab = null;
     var ncmds = mem.u32(Add(base, 0x10));
 
@@ -24,7 +23,7 @@ function fsyms(mem, base, want)
         off += mem.u32(Add(base, off + 0x4));
     }
 
-    if(stab == null) {
+    if (stab == null) {
         fail("stab");
     }
 
@@ -38,14 +37,14 @@ function fsyms(mem, base, want)
             var s = want[j];
             var match = true;
 
-            for(var k = 0; k < s.length; ++k) {
-                if(strs[strx + k] != s.charCodeAt(k)) {
+            for (var k = 0; k < s.length; ++k) {
+                if (strs[strx + k] != s.charCodeAt(k)) {
                     match = false;
                     break;
                 }
             }
 
-            if(match && strs[strx + s.length] == 0) {
+            if (match && strs[strx + s.length] == 0) {
                 syms[s] = mem.readInt64(Add(base, stab.symoff + i * 0x10 + 0x8));
                 want.splice(j, 1);
                 break;
@@ -149,6 +148,7 @@ function spyware(stage1, memory, binary) {
     binary.read = _read;
     binary.readInt64 = _readInt64;
     binary.writeInt64 = _writeInt64;
+    
     var pstart = new Int64('0xffffffffffffffff');
     var pend   = new Int64(0);
     var ncmds  = binary.u32(0x10);
