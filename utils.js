@@ -30,6 +30,12 @@ function unhexlify(hexstr) {
     return bytes;
 }
 
+function hexit(x) {
+    if (x < 0)
+        return `-${hex(-x)}`
+    return `0x${x.toString(16)}`
+}
+
 function hexdump(data) {
     if (typeof data.BYTES_PER_ELEMENT !== 'undefined')
         data = Array.from(data);

