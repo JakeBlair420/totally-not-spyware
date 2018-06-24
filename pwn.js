@@ -47,8 +47,9 @@ function xor(a, b) {
 }
 
 function fail(x) {
-    print('FAIL ' + x)
-    throw null
+    print('FAIL ' + x);
+    location.reload();
+    throw null;
 }
 
 // CVE-2018-4233
