@@ -254,7 +254,7 @@ function spyware(stage1, memory, binary)
                                 fail("LLVM");
                             }
                             size = size.lo();
-                            // This if a fucking monster region, need fast mem access for this shit
+                            // This is a fucking monster region, need fast mem access for this shit
                             var lel = new Uint32Array(size/4);
                             var laddr = Add(stage1.addrof(lel), 0x10);
                             var lold = memory.readInt64(laddr);
