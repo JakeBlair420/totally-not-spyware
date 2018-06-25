@@ -290,7 +290,7 @@ function spyware(stage1, memory, binary)
                     }
                     break;
                 }
-                off += memory.u32(Add(off, 0x4));
+                off += memory.u32(Add(base, off + 0x4));
             }
             continue;
         }
