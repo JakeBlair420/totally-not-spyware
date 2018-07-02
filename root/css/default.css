@@ -1,0 +1,83 @@
+@media only screen 
+  and (min-width: 640px) 
+  and (-webkit-min-device-pixel-ratio: 1) {
+    /* iPad and Desktop Scaling */
+    slider {
+        align-items: center;
+    }
+    
+    slider well{
+        min-width: 500px;
+        max-width: 500px;
+    }
+}
+
+/* Default Body Properties */
+body {
+	background: gray;
+	color: white;
+	font-family: "SF Display", sans-serif;
+	font-weight: 200;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+/* Quick display classes */
+.block {
+	display: block;
+}
+
+.flex {
+    display: flex;
+}
+
+/* Header and View */
+header {
+	background: linear-gradient(to bottom, rgba(34, 34, 34, 0.7), rgba(21, 21, 21, 0.7) 50%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.7));
+	text-align: center;
+	align-items: center;
+}
+
+view {
+	display: flex;
+	justify-content: center;
+}
+
+/* Slider */
+slider {
+	background: linear-gradient(to bottom, rgba(34, 34, 34, 0.7), rgba(21, 21, 21, 0.7) 50%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.7));
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	min-height: 54px;
+	padding: 20px;
+}
+
+slider well {
+    background: linear-gradient(to bottom, black, #1c1c1c);
+	display: flex;
+	align-items: center;
+	border-radius: 16px;
+	border: 1px solid #3f3f3f;
+	min-height: 50px;
+	padding: 0 3px 0 3px;
+}
+
+slider well hint {
+	display: block;
+	justify-content: center;
+	font-size: 18px;
+}
+
+slider thumbtack{
+    background: linear-gradient(to bottom, #fefefe, #dddddd 50%, #d2d2d2 50%, #a2a3a2);
+	color: black;
+    display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 68px;
+	min-height: 44px;
+	border-radius: 12px;
+}
