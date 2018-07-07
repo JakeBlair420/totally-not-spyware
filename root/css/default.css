@@ -67,11 +67,43 @@ slider well {
 
 slider well hint {
 	display: block;
-	justify-content: center;
-	font-size: 18px;
+	text-align: center;
+	width: 100%;
+	padding-right: 5%;
+	padding-left: 5%;
+	margin-left: 70px;
 }
 
-slider thumbtack{
+hint span {
+	font-size: 1.5em;
+	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+	font-weight: 300;
+	
+	-webkit-user-select: none;
+	user-select: none;
+  	
+  	background: -webkit-gradient(linear,left top,right top,
+        color-stop(0, #4d4d4d),
+        color-stop(0.4, #4d4d4d),
+        color-stop(0.5, white),
+        color-stop(0.6, #4d4d4d),
+        color-stop(1, #4d4d4d));
+
+  	background-size: 200%;
+
+  	-webkit-background-clip: text;
+  	-webkit-text-fill-color: transparent;
+
+  	animation: slidetounlock 5s infinite;
+}
+
+@keyframes slidetounlock {
+	0% { background-position: right -40% center; }
+	100% { background-position: left -40% center; }
+}
+
+slider thumbtack {
+	z-index: 5;
     background: linear-gradient(to bottom, #fefefe, #dddddd 50%, #d2d2d2 50%, #a2a3a2);
 	color: black;
     display: flex;
@@ -80,4 +112,5 @@ slider thumbtack{
 	min-width: 68px;
 	min-height: 44px;
 	border-radius: 12px;
+	position: absolute;
 }
