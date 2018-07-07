@@ -1,4 +1,3 @@
-
 // slider logic from JailbreakMe (Star)
 // with foxlet&stek additions (added MNT_NOSUID)
 (function(onSlid) {
@@ -14,12 +13,11 @@
     var startLeft = null;
 
     // Set spacing by margin (hack)
-
-    function set_left(left_) {
-        left = left_;
-        hint.style.opacity = 1 - (left_ / (maxLeft * hintHideRatio));
-        thumbtack.style.marginLeft = left_ + 'px';
-    }
+    var set_left = function(newLeft) {
+        left = newLeft;
+        hint.style.opacity = 1 - (newLeft / (maxLeft * hintHideRatio));
+        thumbtack.style.marginLeft = newLeft + 'px';
+    };
 
     var onDown = function(x) {
         startX = x;
@@ -27,10 +25,10 @@
         thumbtack.style.WebkitTransitionProperty = '';
         thumbtack.style.WebkitTransitionDuration = '0s';
         return false;
-    }
+    };
 
     var onMove = function(x) {
-        if (startX == null) return;
+        if (startX === null) return;
 
         var diff = x - startX;
 
@@ -41,10 +39,10 @@
         }
 
         set_left(diff + startLeft);
-    }
+    };
 
     var onEnd = function() {
-        if (startX == null) return;
+        if (startX === null) return;
         startX = null;
 
         if (left/maxLeft >= slidRatio) {
@@ -53,9 +51,9 @@
             return false;
         }
 
-        var left_ = left;
+        var oldLeft = left;
         set_left(0);
-        thumbtack.style.WebkitTransform = 'translateX(' + left_ + 'px)';
+        thumbtack.style.WebkitTransform = 'translateX(' + oldLeft + 'px)';
 
         setTimeout(function() {
             thumbtack.style.WebkitTransitionProperty = '-webkit-transform';
@@ -64,21 +62,21 @@
         }, 0);
 
         return false;
-    }
+    };
 
     thumbtack.ontouchstart = e => onDown(e.targetTouches[0].clientX);
     window.ontouchmove = e => onMove(e.targetTouches[0].clientX);
-    window.ontouchend = e => onEnd();
+    window.ontouchend = e => onEnd(e);
 
     thumbtack.onmousedown = e => onDown(e.clientX);
     window.onmousemove = e => onMove(e.clientX);
-    window.onmouseup = e => onEnd();
+    window.onmouseup = e => onEnd(e);
 
     return this;
-})(() => alert('Slider slid!'))
+})(() => alert('Slider slid!'));
 
 // Disable vertical scrolling in webapp
 window.ontouchstart = function(e) { 
     e.preventDefault();
     return false;
-}
+};
