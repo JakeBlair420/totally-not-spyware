@@ -1,13 +1,10 @@
-@media only screen 
-  and (min-width: 640px) 
-  and (-webkit-min-device-pixel-ratio: 1) {
-    slider well{
-        min-width: 500px;
-        max-width: 500px;
-    }
+@media only screen and (min-width: 640px) and (-webkit-min-device-pixel-ratio: 1) {
+	slider well {
+		min-width: 500px;
+		max-width: 500px;
+	}
 }
 
-/* Default Body Properties */
 body {
 	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
 	background: gray;
@@ -21,21 +18,10 @@ body {
 	user-select: none;
 }
 
-/* Quick display classes */
-.block {
-	display: block;
-}
-
-.flex {
-    display: flex;
-}
-
-/* Header and View */
 header {
 	background: linear-gradient(to bottom, rgba(34, 34, 34, 0.6), rgba(21, 21, 21, 0.6) 50%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0.6));
 	display: block;
 	text-align: center;
-	align-items: center;
 }
 
 view {
@@ -53,7 +39,7 @@ slider {
 }
 
 slider well {
-    background: linear-gradient(to bottom, #000, #222);
+	background: linear-gradient(to bottom, #000, #222);
 	display: flex;
 	align-items: center;
 	border-radius: 16px;
@@ -74,20 +60,11 @@ slider well hint {
 hint span {
 	font-size: 1.5em;
 	font-weight: 400;
-
-  	background: linear-gradient(to right,
-        #4d4d4d,
-        #4d4d4d 40%,
-        #ffffff 50%,
-        #4d4d4d 60%,
-        #4d4d4d);
-
-  	background-size: 200%;
-
-  	-webkit-background-clip: text;
-  	-webkit-text-fill-color: transparent;
-
-  	animation: slidetounlock 5s infinite;
+	background: linear-gradient(to right, #4d4d4d, #4d4d4d 40%, #ffffff 50%, #4d4d4d 60%, #4d4d4d);
+	background-size: 200%;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: slidetounlock 5s infinite;
 }
 
 span.colon::after {
@@ -117,15 +94,19 @@ span.colon::after {
 }
 
 @keyframes slidetounlock {
-	0% { background-position: right -40% center; }
-	100% { background-position: left -40% center; }
+	0% {
+		background-position: right -40% center;
+	}
+	100% {
+		background-position: left -40% center;
+	}
 }
 
 slider thumbtack {
 	z-index: 5;
-    background: linear-gradient(to bottom, #fefefe, #dddddd 50%, #d2d2d2 50%, #a2a3a2);
+	background: linear-gradient(to bottom, #fefefe, #dddddd 50%, #d2d2d2 50%, #a2a3a2);
 	color: black;
-    display: flex;
+	display: flex;
 	align-items: center;
 	justify-content: center;
 	min-width: 68px;
