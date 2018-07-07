@@ -1,5 +1,6 @@
 // slider logic from JailbreakMe (Star)
 // with foxlet&stek additions (added MNT_NOSUID)
+
 (function(onSlid) {
     var thumbtack = document.getElementById('thumbtack');
     var hint = document.getElementById('hint');

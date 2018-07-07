@@ -1,3 +1,4 @@
+/* Device-Specific Rules */
 @media only screen and (min-width: 640px) and (-webkit-min-device-pixel-ratio: 1) {
 	slider well {
 		min-width: 500px;
@@ -5,6 +6,7 @@
 	}
 }
 
+/* Body Defaults */
 body {
 	font-family: Helvetica, sans-serif;
 	background: gray;
@@ -20,10 +22,34 @@ body {
 	user-select: none;
 }
 
+/* Header and View */ 
 header {
 	background: linear-gradient(to bottom, rgba(34, 34, 34, 0.6), rgba(21, 21, 21, 0.6) 50%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0.6));
 	display: block;
 	text-align: center;
+}
+
+.time {
+	font-size: 4em;
+	margin-bottom: 0px;
+	margin-top: 5px;
+}
+
+.date {
+    margin-top: 0px;
+	margin-bottom: 5px;
+	font-weight: 300;
+	font-size: 1.05em;
+	position: relative;
+	top: -5px;
+}
+
+span.colon::after {
+	font-size: 0.9em;
+	top: -0.1em;
+	bottom: 15px;
+	content: ":";
+	position: relative;
 }
 
 view {
@@ -31,6 +57,7 @@ view {
 	justify-content: center;
 }
 
+/* Slider */ 
 slider {
 	background: linear-gradient(to bottom, rgba(34, 34, 34, 0.7), rgba(21, 21, 21, 0.85) 50%, rgba(0, 0, 0, 0.85) 50%, rgba(0, 0, 0, 1));
 	display: flex;
@@ -52,6 +79,19 @@ slider well {
 	padding: 0 3px 0 3px;
 }
 
+slider #thumbtack {
+	z-index: 5;
+	background: linear-gradient(to bottom, #fefefe, #dddddd 50%, #d2d2d2 50%, #a2a2a2);
+	color: black;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 68px;
+	min-height: 44px;
+	border-radius: 12px;
+	position: relative;
+}
+
 #hint {
 	display: block;
 	text-align: center;
@@ -70,29 +110,7 @@ slider well {
 	animation: slidetounlock 5s infinite;
 }
 
-span.colon::after {
-	font-size: 0.9em;
-	top: -0.1em;
-	bottom: 15px;
-	content: ":";
-	position: relative;
-}
-
-.time {
-	font-size: 4em;
-	margin-bottom: 0px;
-	margin-top: 5px;
-}
-
-.date {
-	margin-top: 0px;
-	margin-bottom: 5px;
-	font-weight: 300;
-	font-size: 1.05em;
-	position: relative;
-	top: -5px;
-}
-
+/* Animations */
 @keyframes slidetounlock {
 	0% {
 		background-position: right -40% center;
@@ -100,17 +118,4 @@ span.colon::after {
 	100% {
 		background-position: left -40% center;
 	}
-}
-
-slider #thumbtack {
-	z-index: 5;
-	background: linear-gradient(to bottom, #fefefe, #dddddd 50%, #d2d2d2 50%, #a2a2a2);
-	color: black;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 58px;
-	min-height: 44px;
-	border-radius: 12px;
-	position: relative;
 }
