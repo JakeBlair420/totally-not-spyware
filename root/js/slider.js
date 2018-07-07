@@ -12,11 +12,11 @@
     var maxLeft = thumbtack.parentNode.clientWidth - thumbtack.clientWidth - 5;
     var startLeft = null;
 
-    // Set spacing by margin (hack)
+    // Set spacing by left, since position is set to relative
     var set_left = function(newLeft) {
         left = newLeft;
         hint.style.opacity = 1 - (newLeft / (maxLeft * hintHideRatio));
-        thumbtack.style.marginLeft = newLeft + 'px';
+        thumbtack.style.left = newLeft + 'px';
     };
 
     var onDown = function(x) {
