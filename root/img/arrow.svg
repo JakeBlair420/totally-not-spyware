@@ -1,0 +1,12 @@
+<?xml version="1.0" standalone="no"?>
+<svg width="31px" height="24px" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="bgGrad" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#b3b3b3" />
+            <stop offset="50%" style="stop-color:#999" />
+            <stop offset="50%" style="stop-color:#808080" />
+            <stop offset="100%" style="stop-color:#595959" />
+        </linearGradient>
+    </defs>
+    <polygon points="1,8 17,8 17,2 29,12.5 17,23 17,16 1,16" style="fill:url(#bgGrad); stroke:#404040;stroke-width:0.5;" />
+</svg>
