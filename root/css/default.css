@@ -6,10 +6,12 @@
 }
 
 body {
-	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+	font-family: Helvetica, sans-serif;
 	background: gray;
 	color: white;
 	font-weight: 200;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
 	margin: 0;
 	display: flex;
 	flex-direction: column;
@@ -77,8 +79,6 @@ span.colon::after {
 }
 
 .time {
-	font-family: HelveticaNeue-Light;
-	font-weight: 400;
 	font-size: 4em;
 	margin-bottom: 0px;
 	margin-top: 5px;
@@ -89,7 +89,6 @@ span.colon::after {
 	margin-bottom: 5px;
 	font-weight: 300;
 	font-size: 1.05em;
-	font-family: Helvetica;
 	position: relative;
 	top: -5px;
 }
