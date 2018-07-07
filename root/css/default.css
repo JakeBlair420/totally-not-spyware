@@ -48,7 +48,7 @@ slider well {
 	padding: 0 3px 0 3px;
 }
 
-slider well hint {
+#hint {
 	display: block;
 	text-align: center;
 	width: 100%;
@@ -57,7 +57,7 @@ slider well hint {
 	margin-left: 70px;
 }
 
-hint span {
+#hint>span {
 	font-size: 1.5em;
 	font-weight: 400;
 	background: linear-gradient(to right, #4d4d4d, #4d4d4d 40%, #ffffff 50%, #4d4d4d 60%, #4d4d4d);
@@ -104,12 +104,12 @@ span.colon::after {
 
 slider thumbtack {
 	z-index: 5;
-	background: linear-gradient(to bottom, #fefefe, #dddddd 50%, #d2d2d2 50%, #a2a3a2);
+	background: linear-gradient(to bottom, #fefefe, #dddddd 50%, #d2d2d2 50%, #a2a2a2);
 	color: black;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 68px;
+	min-width: 58px;
 	min-height: 44px;
 	border-radius: 12px;
 	position: absolute;
