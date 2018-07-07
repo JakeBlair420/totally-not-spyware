@@ -1,11 +1,6 @@
 @media only screen 
   and (min-width: 640px) 
   and (-webkit-min-device-pixel-ratio: 1) {
-    /* iPad and Desktop Scaling */
-    slider {
-        align-items: center;
-    }
-    
     slider well{
         min-width: 500px;
         max-width: 500px;
@@ -22,6 +17,8 @@ body {
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
+	-webkit-user-select: none;
+	user-select: none;
 }
 
 /* Quick display classes */
@@ -35,7 +32,8 @@ body {
 
 /* Header and View */
 header {
-	background: linear-gradient(to bottom, rgba(34, 34, 34, 0.7), rgba(21, 21, 21, 0.7) 50%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.7));
+	background: linear-gradient(to bottom, rgba(34, 34, 34, 0.6), rgba(21, 21, 21, 0.6) 50%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0.6));
+	display: block;
 	text-align: center;
 	align-items: center;
 }
@@ -45,9 +43,8 @@ view {
 	justify-content: center;
 }
 
-/* Slider */
 slider {
-	background: linear-gradient(to bottom, rgba(34, 34, 34, 0.7), rgba(21, 21, 21, 0.7) 50%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.7));
+	background: linear-gradient(to bottom, rgba(34, 34, 34, 0.7), rgba(21, 21, 21, 0.85) 50%, rgba(0, 0, 0, 0.85) 50%, rgba(0, 0, 0, 1));
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
@@ -56,7 +53,7 @@ slider {
 }
 
 slider well {
-    background: linear-gradient(to bottom, black, #1c1c1c);
+    background: linear-gradient(to bottom, #000, #222);
 	display: flex;
 	align-items: center;
 	border-radius: 16px;
@@ -78,15 +75,12 @@ hint span {
 	font-size: 1.5em;
 	font-weight: 400;
 
-	-webkit-user-select: none;
-	user-select: none;
-  	
-  	background: -webkit-gradient(linear,left top,right top,
-        color-stop(0, #4d4d4d),
-        color-stop(0.4, #4d4d4d),
-        color-stop(0.5, white),
-        color-stop(0.6, #4d4d4d),
-        color-stop(1, #4d4d4d));
+  	background: linear-gradient(to right,
+        #4d4d4d,
+        #4d4d4d 40%,
+        #ffffff 50%,
+        #4d4d4d 60%,
+        #4d4d4d);
 
   	background-size: 200%;
 
