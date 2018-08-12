@@ -1,0 +1,15 @@
+
+body {
+	font-family: Helvetica, sans-serif;
+}
+
+.center {
+    position: absolute;
+    margin: auto;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 25%;
+    width: 75%;
+}

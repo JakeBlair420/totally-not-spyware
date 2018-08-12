@@ -8,12 +8,20 @@
 		<link rel="stylesheet" type="text/css" href="css/default.css">
         <!-- iOS App Properties -->
         <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-title" content="TotallyNotSpyware">
+        <meta name="apple-mobile-web-app-title" content="🍍">
         <meta name="apple-mobile-web-app-status-bar-style" content="black">
         <link rel="apple-touch-icon" href="img/ios-icon.png">
         <link href="img/ios-launch.png" media="(device-width: 414px) and (-webkit-device-pixel-ratio: 3)" rel="apple-touch-startup-image" />
+		<script type="text/javascript">
+			function check_compat() {
+				if (!/iPhone OS 10_/.test(navigator.userAgent) &&
+					!/iPhone OS 11_/.test(navigator.userAgent)) {
+					window.location = 'incompatible.html'
+				}
+			}
+		</script>
 	</head>
-	<body>
+	<body onload="javascript:check_compat()">
 		<script type="text/javascript" src="js/utils.js"></script>
 		<script type="text/javascript" src="js/int64.js"></script>
 		<script type="text/javascript" src="js/spyware.js"></script>
