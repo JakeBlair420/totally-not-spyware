@@ -74,7 +74,9 @@
     window.onmouseup = e => onEnd(e);
 
     return this;
-})(() => alert('Slider slid!'));
+})(() => {
+  go();  
+});
 
 // Disable vertical scrolling in webapp
 window.ontouchstart = function(e) { 
