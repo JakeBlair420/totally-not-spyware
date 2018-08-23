@@ -39,7 +39,7 @@
 /***********************************************************************/
 
 #if 0
-igcc64 -o SpywarePatch.dylib -shared SpywarePatch.m -Wall -O3 -framework Foundation -F. -framework CydiaSubstrate && codesign -s - SpywarePatch.dylib
+xcrun -sdk iphoneos cc -arch arm64 -o SpywarePatch.dylib -shared SpywarePatch.m -Wall -O3 -framework Foundation -F. -framework CydiaSubstrate && codesign -s - SpywarePatch.dylib
 #endif
 
 /**********************           Includes         *********************/
@@ -139,12 +139,12 @@ typedef struct
 }Node;
 
 // the two method which will be called by the executeEffects hooks
-void* (*clobberStructures_inplace)(unsigned clobberLimit);
-void* (*clobberStructures_attail)(unsigned clobberLimit);
+void* (*clobberStructures_inplace)(void* ourthis, unsigned clobberLimit);
+void* (*clobberStructures_attail)(void* ourthis,unsigned clobberLimit);
 
 // the two original executeEffects functions
-bool (*executeEffects_original_inplace)(unsigned clobberLimit, Node *node);
-bool (*executeEffects_original_attail)(unsigned clobberLimit, Node *node);
+bool (*executeEffects_original_inplace)(void* ourthis,unsigned clobberLimit, Node *node);
+bool (*executeEffects_original_attail)(void* ourthis,unsigned clobberLimit, Node *node);
 
 /**********************        Function  defs      *********************/
 
@@ -152,23 +152,23 @@ bool (*executeEffects_original_attail)(unsigned clobberLimit, Node *node);
 // they check if the op is create this
 // if so they call clobberStructure on it, which can be called after forNode without sideeffects
 // by that we apply the whole commit to the executeEffects functions
-bool executeEffects_hook_inplace(unsigned clobberLimit, Node *node)
+bool executeEffects_hook_inplace(void* ourthis, unsigned clobberLimit, Node *node)
 {
-    bool ret_val = executeEffects_original_inplace(clobberLimit, node);
+    bool ret_val = executeEffects_original_inplace(ourthis,clobberLimit, node);
 
     if((node->op & 0x3ff) == CREATE_THIS)
     {
-        clobberStructures_inplace(clobberLimit);
+        clobberStructures_inplace(ourthis,clobberLimit);
     }
     return ret_val;
 }
-bool executeEffects_hook_attail(unsigned clobberLimit, Node *node)
+bool executeEffects_hook_attail(void* ourthis,unsigned clobberLimit, Node *node)
 {
-    bool ret_val = executeEffects_original_attail(clobberLimit, node);
+    bool ret_val = executeEffects_original_attail(ourthis,clobberLimit, node);
 
     if((node->op & 0x3ff) == CREATE_THIS)
     {
-        clobberStructures_attail(clobberLimit);
+        clobberStructures_attail(ourthis,clobberLimit);
     }
     return ret_val;
 }
@@ -178,7 +178,6 @@ bool executeEffects_hook_attail(unsigned clobberLimit, Node *node)
 __attribute__((constructor))
 static void doit(void)
 {
-    NSLog(@"aaa");
     /* prepare stuff for the private symbol finder */
     void *handle = dlopen(JSC_PATH, RTLD_NOW);
     void *pub_sym = dlsym(handle, "_ZNK3JSC2B37Effects4dumpERN3WTF11PrintStreamE");
@@ -220,7 +219,7 @@ static void doit(void)
         NSLog(@"Found jumptable (max: 0x%x) @ 0x%llx\n", max_val, jumptable_addr);
 
         /* set permissions */
-        // XXX: doesn't work
+        // TODO: make this work on IOS 11
         kern_return_t ret = mach_vm_protect(mach_task_self(), jumptable_addr, 0x1000, 0, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
         if(ret != 0)
         {
