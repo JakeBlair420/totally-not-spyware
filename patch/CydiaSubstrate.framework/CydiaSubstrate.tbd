@@ -1,0 +1,12 @@
+---
+archs:           [ armv7, arm64 ]
+platform:        ios
+install-name:    /Library/Frameworks/CydiaSubstrate.framework/CydiaSubstrate
+current-version: 0.0
+compatibility-version: 0.0
+exports:
+  - archs:           [ armv7 ]
+    symbols:         [ __Z14MSHookFunctionPvS_PS_ ]
+  - archs:           [ armv7, arm64 ]
+    symbols:         [ 'radr://5614542', _MSDebug, _MSHookFunction ]
+...
