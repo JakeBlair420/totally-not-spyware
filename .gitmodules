@@ -1,0 +1,3 @@
+[submodule "glue/dep/jit"]
+	path = glue/dep/jit
+	url = https://forge.siguza.net/Siguza/jit.git
