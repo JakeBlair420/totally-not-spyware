@@ -23,7 +23,7 @@ FILES   := $(addsuffix .o, $(addprefix $(OBJ)/c/, $(DEP_C))) $(addsuffix .o, $(a
 
 all: $(TARGET)
 
-$(TARGET): $(DEP)/curl-*/lib/.libs/libcurl.a $(DEP)/Meridian/libMeridian.a $(FILES)
+$(TARGET): $(wildcard $(DEP)/curl-*)/lib/.libs/libcurl.a $(DEP)/Meridian/libMeridian.a $(FILES)
 	$(IGXX) -o $@ $(FLAGS) $(GEN) $(FILES) $(LFLAGS)
 
 $(OBJ)/c/%.o: $(SRC)/%.m | $(OBJ)/c
@@ -41,7 +41,7 @@ $(OBJ)/c++:
 $(DEP)/Meridian/libMeridian.a:
 	$(MAKE) -C $(DEP)/Meridian all
 
-$(DEP)/curl-*/lib/.libs/libcurl.a:
+$(wildcard $(DEP)/curl-*)/lib/.libs/libcurl.a:
 	cd $(DEP)/curl-* && ./configure --enable-static --disable-shared --host=aarch64-apple-darwin --without-ssl --with-darwinssl CC='xcrun -sdk iphoneos clang -arch arm64' CFLAGS='-miphoneos-version-min=10.0'
 	$(MAKE) -C $(DEP)/curl-* all
 
