@@ -19,7 +19,7 @@ LFLAGS  += -Wl,-exported_symbols_list,keep.txt
 endif
 FILES   := $(addsuffix .o, $(addprefix $(OBJ)/c/, $(DEP_C))) $(addsuffix .o, $(addprefix $(OBJ)/c++/, $(DEP_CXX)))
 
-.PHONY: all clean
+.PHONY: all clean distclean
 
 all: $(TARGET)
 
@@ -47,6 +47,8 @@ $(DEP)/curl-*/lib/.libs/libcurl.a:
 
 clean:
 	rm -rf $(TARGET) $(OBJ)
+
+distclean: clean
 	$(MAKE) -C $(DEP)/Meridian clean
 ifneq (,$(wildcard $(DEP)/curl-*/Makefile))
 	$(MAKE) -C $(DEP)/curl-* distclean
