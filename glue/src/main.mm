@@ -5,20 +5,31 @@
 #include <unistd.h>             // access, sleep
 #include <sys/sysctl.h>         // sysctlbyname
 #include <mach/mach.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <curl/curl.h>
 #include <liboffsetfinder64/liboffsetfinder64.hpp>
+
+#include "dl.h"
 
 extern "C"
 {
 #   include "common.h"
+#   include "iokit.h"
 #   include "v0rtex.h"
 
-    typedef mach_port_t io_service_t;
-    typedef mach_port_t io_connect_t;
-    extern const mach_port_t kIOMasterPortDefault;
-    CFMutableDictionaryRef IOServiceMatching(const char *name) CF_RETURNS_RETAINED;
-    io_service_t IOServiceGetMatchingService(mach_port_t masterPort, CFDictionaryRef matching CF_RELEASES_ARGUMENT);
-    kern_return_t IOServiceOpen(io_service_t service, task_port_t owningTask, uint32_t type, io_connect_t *client);
-    kern_return_t IOConnectCallAsyncStructMethod(mach_port_t connection, uint32_t selector, mach_port_t wake_port, uint64_t *reference, uint32_t referenceCnt, const void *inputStruct, size_t inputStructCnt, void *outputStruct, size_t *outputStructCnt);
+extern SInt32 CFUserNotificationDisplayAlert(
+    CFTimeInterval timeout,
+    CFOptionFlags flags,
+    CFURLRef iconURL,
+    CFURLRef soundURL,
+    CFURLRef localizationURL,
+    CFStringRef alertHeader,
+    CFStringRef alertMessage,
+    CFStringRef defaultButtonTitle,
+    CFStringRef alternateButtonTitle,
+    CFStringRef otherButtonTitle,
+    CFOptionFlags *responseFlags);
+
 }
 
 __attribute__((noreturn)) static void die()
@@ -37,6 +48,13 @@ __attribute__((noreturn)) static void die()
     input[1] = 1234;  // keep refcon the same value
     while (1)
         IOConnectCallAsyncStructMethod(connect, 17, port, &references, 1, input, sizeof(input), NULL, NULL);
+}
+
+extern "C" CFOptionFlags popup(CFStringRef title, CFStringRef text, CFStringRef buttonOne, CFStringRef buttonTwo, CFStringRef buttonThree)
+{
+    CFOptionFlags flags;
+    CFUserNotificationDisplayAlert(0, 0, NULL, NULL, NULL, title, text, buttonOne, buttonTwo, buttonThree, &flags);
+    return flags & 0x3;
 }
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -58,21 +76,17 @@ static bool useMeridian(void)
             exit(-1);
         }
         LOG("machine: %-*s", (int)len, buf);
-        if(strncmp("iPhone9,", buf, min(8, len)) == 0 || strncmp("iPad7,", buf, min(6, len)) == 0)
+        if(strncmp("iPhone9,", buf, min(8, len)) == 0 || strncmp("iPad7,", buf, min(6, len)) == 0) // No choice
         {
             state = 2;
         }
-        else
+        else if(access("/.cydia_no_stash", F_OK) == 0) // Already jailbroken, detect bootstrap
         {
-            // TODO
-            if(access("/meridian", F_OK) == 0)
-            {
-                state = 2;
-            }
-            else
-            {
-                state = 1;
-            }
+            state = access("/meridian", F_OK) == 0 ? 2 : 1;
+        }
+        else // First time installation, ask user
+        {
+            state = popup(CFSTR("Jailbreak"), CFSTR("Your device can be jailbroken with either DoubleH3lix or Meridian. Please choose."), CFSTR("DoubleH3lix"), CFSTR("Meridian"), NULL) + 1;
         }
     }
     return state == 2;
@@ -105,14 +119,6 @@ static kern_return_t fuck(task_t ktask, kptr_t kbase, void *data)
 
 int main(void)
 {
-#if 0
-to remove:
-
-main
-v0rtex
-offsets (except struct def (BUT version))
-move code from runV0rtex to makeShitHappen
-#endif
     @autoreleasepool
     {
         LOG("we out here\n");
@@ -140,10 +146,17 @@ move code from runV0rtex to makeShitHappen
         if(v0rtex(off, &fuck, &fu) != KERN_SUCCESS)
         {
             LOG("Kernel exploit failed, goodbye...");
-            sleep(1);
+            popup(CFSTR("Jailbreak failed"), CFSTR("Your device will crash/reboot now..."), CFSTR("OK"), NULL, NULL);
             die();
         }
-        LOG("Kernel patches done...");
+        LOG("Exploit done...");
+
+        CURLcode r = curl_global_init(CURL_GLOBAL_ALL);
+        if(r != 0)
+        {
+            LOG("curl_global_init: %d", r);
+            return -1;
+        }
 
         if(useMeridian())
         {
@@ -167,6 +180,7 @@ move code from runV0rtex to makeShitHappen
             runLaunchDaemons();
         }
 
+        curl_global_cleanup();
         sleep(60);
         LOG("The fuck, why we still here?");
     }

