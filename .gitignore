@@ -1,6 +1,1 @@
 .DS_Store
-
-Makefile
-payload
-macho/
-genesis.S
