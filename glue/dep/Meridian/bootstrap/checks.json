@@ -1,0 +1,30 @@
+[
+        {
+                "filename": "tar",
+                "hash": "94677d657ce0808d69921b6f522c3e970c20835c"
+        },
+        {
+                "filename": "cydia-base.tar",
+                "hash": "b3d70110d4614352878ab2fba259019599cb34d9"
+        },
+        {
+                "filename": "dpkgdb-base.tar",
+                "hash": "7616527eaf9fc16946f4830fcdd9913e7fc19265"
+        },
+        {
+                "filename": "installer-base.tar",
+                "hash": "cdd83b14c187aff7bfaba7a15413d58895af034f"
+        },
+        {
+                "filename": "meridian-bootstrap.tar",
+                "hash": "89c0385b7d66c2e7e720381a8e5835e72363bddf"
+        },
+        {
+                "filename": "optional-base.tar",
+                "hash": "5214330866d33a159dae7d0ec1a265f9f35343d8"
+        },
+        {
+                "filename": "system-base.tar",
+                "hash": "c5d92338858a63e405d2d59574f4a8df2dae39e2"
+        },
+]
