@@ -420,7 +420,7 @@ function get_mem_new(stage1) {
 function go() {
     fetch('payload').then((response) => {
         response.arrayBuffer().then((buffer) => {
-            print(`got ${buffer.byteLength} bytes of shc`)
+            print(`got ${buffer.byteLength} bytes of shc`);
             var arrayBuf = new Uint8Array(buffer);
             var header = b2u32(arrayBuf.slice(0, 4)); // sanity check on the header
             if (header != 0xfeedfacf) {
@@ -429,10 +429,11 @@ function go() {
             }
 
             try {
+                document.body.innerHTML = '<center>Please wait</center>';
                 pwn(arrayBuf);
             } catch (e) {
                 print(`Error: ${e}\n${e.stack}`);
             }
         })
-    })
+    });
 }
