@@ -161,21 +161,41 @@ int makeShitHappen() {
         }
     }
 
-#ifdef HEDALESS
-    // Download all files
-    ret = grabBootstrapFiles();
-    if (ret != 0) {
-        FAIL("failed to grab bootstrap files! ret: %d", ret);
-        return 1;
-    }
-#endif
+    // Bootstrap is not installed/missing, download it 
+    if (file_exists("/meridian/.bootstrap") != 0 ||
+        file_exists("/meridian/bootstrap/meridian-bootstrap.tar") != 0) {
+        // download bootstrap files from remote server
+        ret = grabBootstrapFiles();
+        if (ret != 0) {
+            FAIL("failed to grab bootstrap files! ret: %d", ret);
+            return 1;
+        }
 
+        NSString *oldDirectory = [NSString stringWithFormat:@"/tmp/Meridian"];
+        NSString *newDirectory = [NSString stringWithFormat:@"/meridian/bootstrap"];
+
+        [fileMgr removeItemAtPath:newDirectory];
+        ret = mkdir([newDirectory UTF8String], 0755);
+        if (ret != 0) {
+            FAIL("creating %s failed with error %d: %s", [newDirectory UTF8String], errno, strerror(errno));
+            return 1;
+        }
+
+        // should have our *.tar files in /tmp/Meridian - lets move them
+        NSArray *tarFiles = [fileMgr contentsOfDirectoryAtPath:@"/tmp/Meridian" error:nil];
+        for (NSString *file in tarFiles) {
+            [fileMgr moveItemAtPath:[oldDirectory stringByAppendingPathComponent:file]
+                             toPath:[newDirectory stringByAppendingPathComponent:file]
+                              error:nil];
+        }
+    }
+    
     LOG("listing files...");
 
     NSArray *dirs = [fileMgr contentsOfDirectoryAtPath:@"/meridian/bootstrap" error:nil];
     for (NSString *filename in dirs) {
         NSString *filepath = [[NSString stringWithFormat:@"/meridian/bootstrap"] stringByAppendingPathComponent:filename];
-        LOG("found file: %@", filepath);
+        LOG("found bootstrap file: %@", filepath);
     }
 
     ret = chmod("/meridian/bootstrap/tar", 0755);
@@ -201,7 +221,7 @@ int makeShitHappen() {
     dirs = [fileMgr contentsOfDirectoryAtPath:@"/meridian" error:nil];
     for (NSString *filename in dirs) {
         NSString *filepath = [[NSString stringWithFormat:@"/meridian"] stringByAppendingPathComponent:filename];
-        LOG("found file: %@", filepath);
+        LOG("found meridian file: %@", filepath);
     }
 
     // dump offsets to file for later use (/meridian/offsets.plist)
