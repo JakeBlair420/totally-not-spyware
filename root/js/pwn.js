@@ -6,8 +6,18 @@
 
 DEBUG = false
 print = function(msg) {
-    if (!DEBUG) return;
+    if (!DEBUG) 
+    {
+        return;
+    }
+
     alert(msg);
+}
+
+function fail(x) {
+    alert('FAIL ' + x);
+    location.reload();
+    throw null;
 }
 
 ITERS = 10000
