@@ -46,31 +46,8 @@ NSFileManager *fileMgr;
 offsets_t *offsets;
 BOOL great_success = FALSE;
 
-kern_return_t callback(task_t kern_task, kptr_t kbase, void *cb_data);
-
 int makeShitHappen() {
     int ret = 0;
-
-#ifndef HEADLESS
-    // wait for 90s after boot for better v0rtex success
-    int waitTime;
-    while ((waitTime = 90 - uptime()) > 0) {
-        if (waitTime % 5 == 0 ||
-            waitTime <= 5) {
-            LOG("waiting for %d...", waitTime);
-        }
-
-        sleep(1);
-    }
-
-    // run v0rtex
-    LOG("running v0rtex...");
-    suspend_all_threads();
-
-    offsets = get_offsets();
-
-    ret = v0rtex(offsets, &callback, NULL);
-#endif
 
     uint64_t kernel_task_addr = rk64(offsets->kernel_task + kslide);
     kernprocaddr = rk64(kernel_task_addr + offsets->task_bsd_info);
@@ -84,29 +61,7 @@ int makeShitHappen() {
         LOG("kernprocaddr: 0x%llx", kernprocaddr);
     }
 
-#ifndef HEADLESS
-    resume_all_threads();
-    if (ret != 0) {
-        LOG("failed!");
-        if (ret == -420) {
-            LOG("failed to load offsets!");
-            return 1;
-        }
-
-        restart_device();
-        return 1;
-    }
-    LOG("succeeded! praize siguza!");
-#endif
-
     fileMgr = [NSFileManager defaultManager];
-
-    // patch entitlements to allow for CFNotifications
-    ret = patchEntitlements();
-    if (ret != 0) {
-        LOG("failed!");
-        return 1;
-    }
 
     // set up stuff
     init_patchfinder(NULL);
@@ -115,8 +70,6 @@ int makeShitHappen() {
         FAIL("failed to initialize amfi methods :/");
         return 1;
     }
-
-    popup(CFSTR("spyware announcement"), CFSTR("kernel has been pwned >:D"), CFSTR("doot doot"), NULL, NULL);
 
     // patch containermanager
     LOG("patching containermanager...");
@@ -167,14 +120,14 @@ int makeShitHappen() {
         // download bootstrap files from remote server
         ret = grabBootstrapFiles();
         if (ret != 0) {
-            FAIL("failed to grab bootstrap files! ret: %d", ret);
+            FAIL("failed to grab teh bootstrip files! ret: %d\npls make sure u have internets", ret);
             return 1;
         }
 
         NSString *oldDirectory = [NSString stringWithFormat:@"/tmp/Meridian"];
         NSString *newDirectory = [NSString stringWithFormat:@"/meridian/bootstrap"];
 
-        [fileMgr removeItemAtPath:newDirectory];
+        [fileMgr removeItemAtPath:newDirectory error:nil];
         ret = mkdir([newDirectory UTF8String], 0755);
         if (ret != 0) {
             FAIL("creating %s failed with error %d: %s", [newDirectory UTF8String], errno, strerror(errno));
@@ -394,82 +347,6 @@ kern_return_t callback(task_t kern_task, kptr_t kbase, void *cb_data) {
     return KERN_SUCCESS;
 }
 
-int patchEntitlements() {
-    uint64_t my_proc = find_proc_by_pid(getpid());
-    if (my_proc == 0) {
-        LOG("failed to get my proc!");
-        return -1;
-    }
-    LOG("got my proc: %llx", my_proc);
-
-    uint64_t textvp = rk64(my_proc + 0x248); // proc_t::p_textvp
-    if (textvp == 0) {
-        LOG("proc_t::p_textvp was empty!");
-        return -1;
-    }
-
-    uint64_t ubcinfo = rk64(textvp + 0x78); // vnode::v_ubcinfo
-    if (ubcinfo == 0) {
-        LOG("vnode::v_ubcinfo was empty!");
-        return -1;
-    }
-
-    uint64_t csblobs = rk64(ubcinfo + 0x50); // ubc_info::csblobs
-    if (csblobs == 0) {
-        LOG("ubc_info::csblobs was empty!");
-        return -1;
-    }
-
-    uint64_t csb_entitlements_blob = rk64(csblobs + 0x90); // cs_blob::csb_entitlements_blob
-    if (csb_entitlements_blob == 0) {
-        LOG("cs_blob::csb_entitlements_blob was empty!");
-        return -1;
-    }
-    LOG("csb_entitlements_blob: %llx", csb_entitlements_blob);
-
-    uint32_t blob_magic = ntohl(rk32(csb_entitlements_blob));
-    uint32_t blob_length = ntohl(rk32(csb_entitlements_blob + 0x4)); // CS_GenericBlob::length
-    LOG("blob magic: %x", blob_magic);
-    LOG("blob is %x bytes in length", blob_length);
-    if (blob_length == 0) {
-        LOG("no entitlements were found?? weird shit man");
-        return -1;
-    }
-
-    struct CS_GenericBlob *kern_blob = (struct CS_GenericBlob *)malloc(blob_length);
-    kread(csb_entitlements_blob, kern_blob, blob_length);
-    LOG("blob magic: %x", ntohl(kern_blob->magic));
-    LOG("blob length: %x", ntohl(kern_blob->length));
-
-    NSString *entString = [NSString stringWithFormat:@"%s", kern_blob->data];
-    LOG("got entitmenets: %@", [entString substringToIndex:35]);
-
-    const char *new_ents =  "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-                            "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">"
-                            "<plist version=\"1.0\">"
-                                "<dict>"
-                                    "<key>com.apple.springboard.CFUserNotification</key>"
-                                    "<true/>"
-                                "</dict>"
-                            "</plist>";
-
-    int full_blob_size = sizeof(struct CS_GenericBlob) + strlen(new_ents) + 1;
-    struct CS_GenericBlob *new_blob = (struct CS_GenericBlob *)calloc(1, full_blob_size);
-
-    new_blob->magic = ntohl(0xfade7171);
-    new_blob->length = ntohl(full_blob_size);
-    strncpy(new_blob->data, new_ents, strlen(new_ents + 1));
-
-    // allocate into kernel
-    uint64_t new_kern_blob = kalloc(full_blob_size);
-    kwrite(new_kern_blob, new_blob, full_blob_size);
-
-    // assign into csblob
-    wk64(csblobs + 0x90, new_kern_blob);
-
-    return 0;
-}
-
 int patchContainermanagerd() {
     uint64_t cmgr = find_proc_by_name("containermanager");
     if (cmgr == 0) {
@@ -600,7 +477,7 @@ int defecateAmfi() {
     if (pid < 0) {
         LOG("amfid is not running? launching it :^)");
         execprog("/meridian/nohup", NULL);
-        sleep(1);
+        sleep(3);
 
         pid = get_pid_for_name("amfid");
         if (pid < 0) {

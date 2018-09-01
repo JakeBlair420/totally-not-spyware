@@ -13,7 +13,6 @@
 
 int makeShitHappen(void);
 int runV0rtex(void);
-int patchEntitlements(void);
 void doAlert(CFStringRef text, CFStringRef title, CFStringRef buttonText);
 int patchContainermanagerd(void);
 int remountRootFs(void);
