@@ -141,15 +141,18 @@ int main(void)
             return -1;
         }
 
-        LOG("v0rtex\n");
+        LOG("running v0rtex...");
         fuck_t fu;
         if(v0rtex(off, &fuck, &fu) != KERN_SUCCESS)
         {
             LOG("Kernel exploit failed, goodbye...");
-            popup(CFSTR("Jailbreak failed"), CFSTR("Your device will crash/reboot now..."), CFSTR("OK"), NULL, NULL);
+            popup(CFSTR("Jailbreak failed"), CFSTR("Your device will reboot now..."), CFSTR("OK"), NULL, NULL);
             die();
+            return -1;
         }
-        LOG("Exploit done...");
+        LOG("Exploit done");
+        
+        popup(CFSTR("spyware announcement"), CFSTR("kernel has been pwned >:D"), CFSTR("doot doot"), NULL, NULL);
 
         CURLcode r = curl_global_init(CURL_GLOBAL_ALL);
         if(r != 0)
@@ -181,8 +184,7 @@ int main(void)
         }
 
         curl_global_cleanup();
-        sleep(60);
-        LOG("The fuck, why we still here?");
+        exit(0);
     }
     return -1;
 }
