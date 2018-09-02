@@ -11,17 +11,26 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="img/ios-icon.png">
 <link href="img/ios-launch.png" media="(device-width: 414px) and (-webkit-device-pixel-ratio: 3)" rel="apple-touch-startup-image" />
+<script src="js/utils.js"></script>
 <script>
 if(
     !/iPhone OS 10_/.test(navigator.userAgent)
     //&& !/iPhone OS 11_/.test(navigator.userAgent)
 )
 {
-    window.location = 'incompatible.html'
+    // #i_can_haz_buttloop
+    window.crypto.subtle.digest(
+        {'name':'SHA-1'},
+        str2ab(window.location.hash)
+    ).then(function(x) {
+        if(hexlify(new Uint8Array(x)) != '9e04130fa02fc3c416f28ba556f0165da4d93054')
+            throw null;
+    }).catch(function(){
+        window.location = 'incompatible.html'
+    })
 }
 </script>
 <script src="js/slider.js"></script>
-<script src="js/utils.js"></script>
 <script src="js/int64.js"></script>
 <script src="js/spyware.js"></script>
 <script src="js/pwn.js"></script>
