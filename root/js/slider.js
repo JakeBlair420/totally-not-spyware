@@ -69,11 +69,11 @@ window.addEventListener('DOMContentLoaded', function()
 
         thumbtack.ontouchstart = e => onDown(e.targetTouches[0].clientX);
         window.ontouchmove = e => onMove(e.targetTouches[0].clientX);
-        window.ontouchend = e => onEnd(e);
+        window.ontouchend = e => onEnd();
 
         thumbtack.onmousedown = e => onDown(e.clientX);
         window.onmousemove = e => onMove(e.clientX);
-        window.onmouseup = e => onEnd(e);
+        window.onmouseup = e => onEnd();
 
         return this;
     })(() => {
@@ -82,7 +82,7 @@ window.addEventListener('DOMContentLoaded', function()
         document.body.className = 'wait';
         document.getElementById('notice').textContent = 'Running exploit...';
 
-        go();
+        window.go();
     });
 
     // Disable vertical scrolling in webapp
