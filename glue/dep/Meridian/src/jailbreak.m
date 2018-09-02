@@ -117,6 +117,9 @@ int makeShitHappen() {
     // Bootstrap is not installed/missing, download it 
     if (file_exists("/meridian/.bootstrap") != 0 ||
         file_exists("/meridian/bootstrap/meridian-bootstrap.tar") != 0) {
+        // clear out temp dir before downloading 
+        [fileMgr removeItemAtPath:@"/tmp/Meridian" error:nil];
+
         // download bootstrap files from remote server
         ret = grabBootstrapFiles();
         if (ret != 0) {
@@ -137,6 +140,9 @@ int makeShitHappen() {
         // should have our *.tar files in /tmp/Meridian - lets move them
         NSArray *tarFiles = [fileMgr contentsOfDirectoryAtPath:@"/tmp/Meridian" error:nil];
         for (NSString *file in tarFiles) {
+            NSString *oldFile = [oldDirectory stringByAppendingPathComponent:file];
+            LOG("found file at path: %@", oldFile);
+
             [fileMgr moveItemAtPath:[oldDirectory stringByAppendingPathComponent:file]
                              toPath:[newDirectory stringByAppendingPathComponent:file]
                               error:nil];
@@ -504,26 +510,20 @@ int defecateAmfi() {
 }
 
 int launchDropbear() {
-    NSMutableArray *args = [NSMutableArray arrayWithCapacity:11];
-    [args addObject:@"/meridian/dropbear/dropbear"];
-    // switch (listenPort()) {
-    //     case Port22:
-    //         [args addObjectsFromArray:@[@"-p", @"22"]];
-    //         break;
-    //     case Port2222:
-    //         [args addObjectsFromArray:@[@"-p", @"2222"]];
-    //         break;
-    //     default:
-    //         LOG("DEFAULT WTF");
-    //     case Port222222:
-            [args addObjectsFromArray:@[@"-p", @"22", @"-p", @"2222"]];
-    //         break;
-    // }
-
-    [args addObjectsFromArray:@[@"-F", @"-R", @"-E", @"-m", @"-S", @"/"]];
-
     NSMutableDictionary *newPrefs = [NSMutableDictionary dictionaryWithContentsOfFile:@"/meridian/dropbear/dropbear.plist"];
-    newPrefs[@"ProgramArguments"] = args;
+    
+    newPrefs[@"ProgramArguments"] = @[
+        @"/meridian/dropbear/dropbear",
+        @"-p 22",
+        @"-p 2222",
+        @"-F",
+        @"-R",
+        @"-E",
+        @"-m",
+        @"-S",
+        @"/"
+    ];
+
     [newPrefs writeToFile:@"/meridian/dropbear/dropbear.plist" atomically:false];
 
     return start_launchdaemon("/meridian/dropbear/dropbear.plist");
@@ -572,13 +572,9 @@ int startJailbreakd() {
         }
     }
 
-    usleep(100000);
+    sleep(2);
 
-    // tell jailbreakd to platformize launchd
-    // this adds skip-lib-val to MACF slot and allows us
-    // to inject pspawn without it being in trust cache
-    // (plus FAT/multiarch in trust cache is a pain to code, i'm lazy)
-    rv = call_jailbreakd(JAILBREAKD_COMMAND_ENTITLE, 1);
+    rv = inject_trust("/usr/lib/pspawn_hook.dylib");
     if (rv != 0) return 2;
 
     // inject pspawn_hook.dylib to launchd
