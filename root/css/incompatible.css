@@ -5,17 +5,17 @@
 }
 
 body {
-	display: flex;
+    display: flex;
     justify-content: center;
     align-items: center;
     font-family: Helvetica, sans-serif;
-	color: #95d0c6;
-	background-color: #0c3b3e;
+    color: #95d0c6;
+    background-color: #0c3b3e;
 }
 
 .center {
-	display: flex;
+    display: flex;
     flex-direction: column;
-	text-align: center;
-	animation: bob 5s ease-in-out infinite;
+    text-align: center;
+    animation: bob 5s ease-in-out infinite;
 }
