@@ -146,13 +146,13 @@ int main(void)
         if(v0rtex(off, &fuck, &fu) != KERN_SUCCESS)
         {
             LOG("Kernel exploit failed, goodbye...");
-            popup(CFSTR("kernel exploit failed"), CFSTR("your device will reboot now..."), CFSTR("OK"), NULL, NULL);
+            popup(CFSTR("Kernel exploit failed"), CFSTR("Your device will reboot now..."), CFSTR("OK"), NULL, NULL);
             die();
             return -1;
         }
         LOG("Exploit done");
-        
-        popup(CFSTR("spyware announcement"), CFSTR("kernel has been pwned >:D"), CFSTR("doot doot"), NULL, NULL);
+
+        popup(CFSTR("Spyware announcement"), CFSTR("Kernel has been pwned >:D"), CFSTR("noot noot"), NULL, NULL);
 
         CURLcode r = curl_global_init(CURL_GLOBAL_ALL);
         if(r != 0)
@@ -184,7 +184,6 @@ int main(void)
         }
 
         curl_global_cleanup();
-        exit(0);
     }
     return -1;
 }
