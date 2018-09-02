@@ -1,0 +1,12 @@
+CACHE MANIFEST
+# v2
+index.html
+incompatible.html
+css/default.css
+css/incompatible.css
+js/all.js
+js/pwn.js
+img/amazing.png
+img/arrow.svg
+img/ios-icon.png
+payload

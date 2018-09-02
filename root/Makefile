@@ -2,7 +2,7 @@ TARGET = dist
 
 .PHONY: all clean
 
-all: $(addprefix $(TARGET)/,$(wildcard img/*)) $(addprefix $(TARGET)/,$(wildcard css/*)) $(TARGET)/js/all.js $(TARGET)/js/pwn.js $(TARGET)/index.html $(TARGET)/incompatible.html $(TARGET)/payload $(TARGET)/bootstrap/Meridian.tar.xz # $(TARGET)/bootstrap/DH.tar.xz
+all: $(addprefix $(TARGET)/,$(wildcard img/*)) $(addprefix $(TARGET)/,$(wildcard css/*)) $(TARGET)/js/all.js $(TARGET)/js/pwn.js $(TARGET)/index.html $(TARGET)/incompatible.html $(TARGET)/payload $(TARGET)/manifest.appcache $(TARGET)/favicon.ico $(TARGET)/bootstrap/Meridian.tar.xz # $(TARGET)/bootstrap/DH.tar.xz
 
 $(TARGET)/img/%: img/% | $(TARGET)/img
 	cp $^ $@
@@ -29,6 +29,12 @@ $(TARGET)/payload: ../glue/payload | $(TARGET)
 	JIT=1 $(MAKE) -C ../glue all
 
 $(TARGET)/bootstrap/Meridian.tar.xz: ../glue/dep/Meridian/Meridian.tar.xz | $(TARGET)/bootstrap
+	cp $^ $@
+
+$(TARGET)/manifest.appcache: manifest.appcache | $(TARGET)
+	cp $^ $@
+
+$(TARGET)/favicon.ico: favicon.ico | $(TARGET)
 	cp $^ $@
 
 ../glue/dep/Meridian/Meridian.tar.xz:

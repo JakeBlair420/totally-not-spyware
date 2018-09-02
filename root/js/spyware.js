@@ -7,6 +7,11 @@
         throw null;
     }
 
+    window.b2u32 = function b2u32(b)
+    {
+        return (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0;
+    }
+
     function off2addr(segs, off)
     {
         if(!(off instanceof Int64)) off = new Int64(off);
@@ -90,11 +95,6 @@
             }
         }
         return fn(str.length) == 0;
-    }
-
-    function b2u32(b)
-    {
-        return (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0;
     }
 
     function _u32(i)
