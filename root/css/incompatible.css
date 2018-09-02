@@ -1,6 +1,5 @@
-
 body {
-	font-family: Helvetica, sans-serif;
+    font-family: Helvetica, sans-serif;
 }
 
 .center {
@@ -12,4 +11,5 @@ body {
     right: 0;
     height: 25%;
     width: 75%;
+    text-align: center;
 }

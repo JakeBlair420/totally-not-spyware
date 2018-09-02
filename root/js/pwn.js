@@ -47,7 +47,7 @@ function xor(a, b) {
 }
 
 function fail(x) {
-    print('FAIL ' + x);
+    alert('FAIL ' + x);
     location.reload();
     throw null;
 }
@@ -428,12 +428,19 @@ function go() {
                 return;
             }
 
-            try {
-                document.body.innerHTML = '<center>Please wait</center>';
-                pwn(arrayBuf);
-            } catch (e) {
-                print(`Error: ${e}\n${e.stack}`);
-            }
+            let logo = document.getElementById('logo');
+            logo.parentNode.removeChild(logo);
+            document.body.className = 'wait';
+            document.getElementById('notice').textContent = 'Running exploit...';
+
+            window.setTimeout(function()
+            {
+                try {
+                    pwn(arrayBuf);
+                } catch (e) {
+                    print(`Error: ${e}\n${e.stack}`);
+                }
+            }, 0);
         })
     });
 }

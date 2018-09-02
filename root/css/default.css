@@ -1,131 +1,165 @@
 /* Device-Specific Rules */
 @media only screen and (min-width: 640px) and (-webkit-min-device-pixel-ratio: 1) {
-	slider well {
-		min-width: 500px;
-		max-width: 500px;
-	}
+    #slider #well {
+        min-width: 500px;
+        max-width: 500px;
+    }
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 /* Body Defaults */
 body {
-	font-family: Helvetica, sans-serif;
-	animation: bg-crazycolors 0.3s linear infinite;
-	color: white;
-	font-weight: 200;
-	text-rendering: optimizeLegibility;
-	-webkit-font-smoothing: antialiased;
-	margin: 0;
-	display: flex;
-	flex-direction: column;
-	justify-content: space-between;
-	-webkit-user-select: none;
-	user-select: none;
+    font-family: Helvetica, sans-serif;
+    color: white;
+    font-weight: 200;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
-/* Header and View */ 
+body.crazycolors {
+    animation: bg-crazycolors 0.3s linear infinite;
+}
+
+body.wait {
+    background: #666;
+}
+
+/* Header and View */
 header {
-	background: linear-gradient(to bottom, rgba(105, 104, 104, 0.6), rgba(35, 35, 35, 0.6) 50%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0.6));
-	border-bottom: 1px solid #4646467a;
+    background: linear-gradient(to bottom, rgba(105, 104, 104, 0.6), rgba(35, 35, 35, 0.6) 50%, rgba(0, 0, 0, 0.6) 50%, rgba(0, 0, 0, 0.6));
+    border-bottom: 1px solid #4646467a;
     outline: 1px solid #000000cf;
-	display: block;
-	text-align: center;
+    display: block;
+    text-align: center;
 }
 
 .time {
-	font-size: 4em;
-	margin-bottom: 0px;
-	margin-top: 5px;
+    font-size: 4em;
+    margin-bottom: 0px;
+    margin-top: 5px;
 }
 
 .date {
     margin-top: 0px;
-	margin-bottom: 5px;
-	font-weight: 300;
-	font-size: 1.05em;
-	position: relative;
-	top: -5px;
+    margin-bottom: 5px;
+    font-weight: 300;
+    font-size: 1.05em;
+    position: relative;
+    top: -5px;
 }
 
 span.colon::after {
-	font-size: 0.9em;
-	top: -0.1em;
-	bottom: 15px;
-	content: ":";
-	position: relative;
+    font-size: 0.9em;
+    top: -0.1em;
+    bottom: 15px;
+    content: ":";
+    position: relative;
 }
 
-view {
-	display: flex;
-	justify-content: center;
+#main {
+    display: flex;
+    justify-content: center;
+    z-index: -1;
 }
 
 #logo {
     animation: tf-zoombob 2s linear infinite;
+    width: 65vmin;
+    height: 65vmin;
 }
 
-/* Slider */ 
-slider {
+#notice {
+    display: none;
+}
+
+body.wait #notice {
+    display: block;
+    font-size: 30pt;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Slider */
+#slider {
     background: linear-gradient(to bottom, rgba(56, 56, 56, 0.48), rgba(21, 21, 21, 0.78) 50%, rgba(0, 0, 0, 0.77) 50%, rgba(0, 0, 0, 0.7));
     border-top: 1px solid #ffffff47;
     outline: 1px solid #000000cf;
-	display: flex;
-	flex-direction: row;
-	justify-content: center;
-	min-height: 54px;
-	padding: 20px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    min-height: 54px;
+    padding: 20px;
 }
 
-slider well {
-	background: linear-gradient(to bottom, #000, #222222b0);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 16px;
-	border: 1px solid #3f3f3f;
-	min-height: 50px;
-	width: 100%;
-	padding: 0 3px 0 3px;
+#slider #well {
+    background: linear-gradient(to bottom, #000, #222222b0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    border: 1px solid #3f3f3f;
+    min-height: 50px;
+    width: 100%;
+    padding: 0 3px 0 3px;
 }
 
-slider #thumbtack {
-	z-index: 5;
-	background: linear-gradient(to bottom, #fefefe, #dddddd 50%, #d2d2d2 50%, #a2a2a2);
-	color: black;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 68px;
-	min-height: 44px;
-	border-radius: 12px;
-	position: relative;
+#slider #thumbtack {
+    z-index: 5;
+    background: linear-gradient(to bottom, #fefefe, #dddddd 50%, #d2d2d2 50%, #a2a2a2);
+    color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 68px;
+    min-height: 44px;
+    border-radius: 12px;
+    position: relative;
 }
 
 #hint {
-	display: block;
-	text-align: center;
-	width: 100%;
+    display: block;
+    text-align: center;
+    width: 100%;
 }
 
 #hint>span {
-	display: inline-block;
-	width: 100%;
-	font-size: 1.5em;
-	font-weight: 400;
-	background: linear-gradient(to right, #4d4d4d, #4d4d4d 40%, #ffffff 50%, #4d4d4d 60%, #4d4d4d);
-	background-size: 200%;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
-	animation: slidetounlock 5s infinite;
+    display: inline-block;
+    /*width: 100%;*/
+    font-size: 1.5em;
+    font-weight: 400;
+    background: linear-gradient(to right, #4d4d4d, #4d4d4d 40%, #ffffff 50%, #4d4d4d 60%, #4d4d4d);
+    background-size: 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: slidetounlock 2.5s infinite linear;
 }
 
 /* Animations */
 @keyframes slidetounlock {
-	0% {
-		background-position: right -40% center;
-	}
-	100% {
-		background-position: left -40% center;
-	}
+    /*0% {
+        background-position: right -40% center;
+    }
+    100% {
+        background-position: left -40% center;
+    }*/
+    0% {
+        background-position: 140% center;
+    }
+    100% {
+        background-position: -40% center;
+    }
 }
 
 /* BadgeApp Animations */

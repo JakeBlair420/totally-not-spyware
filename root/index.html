@@ -1,4 +1,5 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <title>&#8290;</title>
 <meta charset="utf-8">
 <link rel="shortcut icon" href="img/site-icon.png">
@@ -10,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="img/ios-icon.png">
 <link href="img/ios-launch.png" media="(device-width: 414px) and (-webkit-device-pixel-ratio: 3)" rel="apple-touch-startup-image" />
-<script type="text/javascript">
+<script>
 if(
     !/iPhone OS 10_/.test(navigator.userAgent)
     //&& !/iPhone OS 11_/.test(navigator.userAgent)
@@ -19,29 +20,30 @@ if(
     window.location = 'incompatible.html'
 }
 </script>
-<script type="text/javascript" src="js/utils.js"></script>
-<script type="text/javascript" src="js/int64.js"></script>
-<script type="text/javascript" src="js/spyware.js"></script>
-<script type="text/javascript" src="js/pwn.js"></script>
-<body>
+<script src="js/slider.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/int64.js"></script>
+<script src="js/spyware.js"></script>
+<script src="js/pwn.js"></script>
+<body class="crazycolors">
     <header class="block">
         <div class="time">10<span class="colon"></span>04</div>
         <div class="date">Reckoning Day</div>
     </header>
-    <view>
-        <img id="logo" src="img/amazing.png" height=35% />
-    </view>
-    <slider>
-        <well>
+    <div id="main">
+        <img id="logo" src="img/amazing.png" alt="logo">
+        <div id="notice"></div>
+    </div>
+    <div id="slider">
+        <div id="well">
             <div id="thumbtack">
-                <img class="arrow" src="img/arrow.svg">
+                <img class="arrow" src="img/arrow.svg" alt="arrow">
             </div>
 
             <div id="hint">
                 <span>slide for spyware</span>
             </div>
-        </well>
-    </slider>
-    <script type="text/javascript" src="js/slider.js"></script>
+        </div>
+    </div>
 </body>
 </html>

