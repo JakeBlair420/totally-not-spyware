@@ -2,6 +2,7 @@
 /payload
 /dep/curl-*/**/*.o
 /dep/curl-*/**/*.lo
+/dep/curl-*/**/Makefile
 /dep/curl-*/config.log
 /dep/curl-*/config.status
 /dep/curl-*/curl-config
