@@ -1,7 +1,7 @@
 @keyframes bob {
-    0% {transform: translatey(-10px);}
-    50% {transform: translatey(10px);}
-    100% {transform: translatey(-10px);}
+    0% {transform: translateY(-10px);}
+    50% {transform: translateY(10px);}
+    100% {transform: translateY(-10px);}
 }
 
 body {
