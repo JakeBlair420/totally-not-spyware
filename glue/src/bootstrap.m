@@ -13,7 +13,7 @@
 
 #include "bootstrap.h"
 
-#define BASE_URL "http://192.168.2.1:8080/bootstrap/"
+#define BASE_URL "https://totally-not.spyware.lol/bootstrap/"
 
 int downloadAndExtract(const char *file, const char *path, const char *dir)
 {
