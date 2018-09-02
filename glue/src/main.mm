@@ -146,7 +146,7 @@ int main(void)
         if(v0rtex(off, &fuck, &fu) != KERN_SUCCESS)
         {
             LOG("Kernel exploit failed, goodbye...");
-            popup(CFSTR("Jailbreak failed"), CFSTR("Your device will reboot now..."), CFSTR("OK"), NULL, NULL);
+            popup(CFSTR("kernel exploit failed"), CFSTR("your device will reboot now..."), CFSTR("OK"), NULL, NULL);
             die();
             return -1;
         }

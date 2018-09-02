@@ -77,7 +77,12 @@ window.addEventListener('DOMContentLoaded', function()
 
         return this;
     })(() => {
-      go();
+        let logo = document.getElementById('logo');
+        logo.parentNode.removeChild(logo);
+        document.body.className = 'wait';
+        document.getElementById('notice').textContent = 'Running exploit...';
+
+        go();
     });
 
     // Disable vertical scrolling in webapp

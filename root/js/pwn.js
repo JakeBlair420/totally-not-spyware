@@ -437,12 +437,7 @@ function go() {
                 print(`header is invalid: ${hexit(header)}, should be 0xfeedfacf\nwtf is your payload??`);
                 return;
             }
-
-            let logo = document.getElementById('logo');
-            logo.parentNode.removeChild(logo);
-            document.body.className = 'wait';
-            document.getElementById('notice').textContent = 'Running exploit...';
-
+            
             window.setTimeout(function()
             {
                 try {
