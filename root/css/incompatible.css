@@ -1,15 +1,21 @@
+@keyframes bob {
+    0% {transform: translatey(-10px);}
+    50% {transform: translatey(10px);}
+    100% {transform: translatey(-10px);}
+}
+
 body {
+	display: flex;
+    justify-content: center;
+    align-items: center;
     font-family: Helvetica, sans-serif;
+	color: #95d0c6;
+	background-color: #0c3b3e;
 }
 
 .center {
-    position: absolute;
-    margin: auto;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 25%;
-    width: 75%;
-    text-align: center;
+	display: flex;
+    flex-direction: column;
+	text-align: center;
+	animation: bob 5s ease-in-out infinite;
 }
