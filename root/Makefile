@@ -11,7 +11,7 @@ $(TARGET)/css/%: css/% | $(TARGET)/css
 	closure-css $^ -o $@
 
 $(TARGET)/js/all.js: js/utils.js js/version.js js/slider.js js/int64.js js/spyware.js | $(TARGET)/js # NOTE: order is important!
-	closure-js -O SIMPLE --language_in ECMASCRIPT_2016 --language_out ECMASCRIPT_2016 $^ --js_output_file $@
+	closure-js -O SIMPLE --language_in ECMASCRIPT_2016 --language_out ECMASCRIPT5 $^ --js_output_file $@
 
 $(TARGET)/js/pwn.js: js/pwn.js | $(TARGET)/js # minify only
 	closure-js -O WHITESPACE_ONLY $^ --js_output_file $@

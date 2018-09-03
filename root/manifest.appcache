@@ -1,5 +1,7 @@
 CACHE MANIFEST
-# v1.0
+# v1.2
+
+CACHE:
 index.html
 incompatible.html
 css/default.css
@@ -11,3 +13,6 @@ img/arrow.svg
 img/ios-icon.png
 payload
 favicon.ico
+
+NETWORK:
+manifest.appcache
