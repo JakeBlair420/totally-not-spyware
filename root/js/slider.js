@@ -82,7 +82,9 @@ window.addEventListener('DOMContentLoaded', function()
         document.body.className = 'wait';
         document.getElementById('notice').textContent = 'Running exploit...';
 
-        window.go();
+        window.setTimeout(function(){
+            window.go();
+        }, 10);
     });
 
     // Disable vertical scrolling in webapp

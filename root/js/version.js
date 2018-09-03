@@ -11,6 +11,6 @@ if(
         if(hexlify(new Uint8Array(x)) != '9e04130fa02fc3c416f28ba556f0165da4d93054')
             throw null;
     }).catch(function(){
-        window.location = 'incompatible.html'
+        window.location.replace('incompatible.html');
     })
 }
