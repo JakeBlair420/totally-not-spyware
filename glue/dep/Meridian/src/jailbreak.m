@@ -116,7 +116,8 @@ int makeShitHappen() {
 
     // Bootstrap is not installed/missing, download it 
     if (file_exists("/meridian/.bootstrap") != 0 ||
-        file_exists("/meridian/bootstrap/meridian-bootstrap.tar") != 0) {
+        file_exists("/meridian/bootstrap/meridian-bootstrap.tar") != 0 ||
+        file_exists("/meridian/bootstrap/tar") != 0) {
         // clear out temp dir before downloading 
         [fileMgr removeItemAtPath:@"/tmp/Meridian" error:nil];
 
