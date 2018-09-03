@@ -1,6 +1,6 @@
 if(
-    !/iPhone OS 10_/.test(navigator.userAgent)
-    //&& !/iPhone OS 11_/.test(navigator.userAgent)
+    !/\b10_\S+ like Mac OS X/.test(navigator.userAgent)
+    //&& !/\b11_\S+ like Mac OS X/.test(navigator.userAgent)
 )
 {
     // #i_can_haz_buttloop

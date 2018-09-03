@@ -246,7 +246,7 @@
         var opcodes;
         var opcode_libs;
 
-        if (/iPhone OS 10_/.test(navigator.userAgent)) {
+        if (/\b10_\S+ like Mac OS X/.test(navigator.userAgent)) {
             //print('found iPhone OS 10')
             opcodes = {
                 // mov x0, x23; mov x1, x22; mov x2, x24; mov x3, x25; mov x4, x26; mov x5, x27; blr x28
@@ -754,7 +754,7 @@
             )
         }
 
-        if (/iPhone OS 10_/.test(navigator.userAgent)) {
+        if (/\b10_\S+ like Mac OS X/.test(navigator.userAgent)) {
             add_call(mach_vm_protect
                 , mach_task_self_    // task
                 , codeAddr           // addr
