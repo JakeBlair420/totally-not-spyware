@@ -4,7 +4,7 @@ if(
 )
 {
     // #i_can_haz_buttloop
-    window.crypto.subtle.digest(
+    (window.crypto.subtle || window.crypto.webkitSubtle).digest(
         {'name':'SHA-1'},
         str2ab(window.location.hash)
     ).then(function(x) {

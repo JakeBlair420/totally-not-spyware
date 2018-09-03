@@ -122,7 +122,7 @@ int main(void)
     @autoreleasepool
     {
         LOG("we out here\n");
-        LOG("v1.7\n");
+        LOG("v1.8\n");
 
         tihmstar::offsetfinder64 fi("/System/Library/Caches/com.apple.kernelcaches/kernelcache");
 
