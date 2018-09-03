@@ -329,9 +329,6 @@ int makeShitHappen() {
     ret = execprog("/meridian/nohup", (const char **)&(const char*[]) {
         "/meridian/nohup",
         "/meridian/ldrestart",
-        "2>&1",
-        ">/dev/null",
-        "&",
         NULL
     });
     if (ret != 0) {
