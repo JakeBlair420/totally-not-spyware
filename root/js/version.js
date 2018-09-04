@@ -13,4 +13,10 @@ if(
     }).catch(function(){
         window.location.replace('incompatible.html');
     })
+}else{
+	// check if the user got to the incompatible page (maybe by clicking on a posted link), but is on a compatible version
+	if (window.location.href.indexOf("incompatible") != -1) {
+		// redirect it back to the main page
+		window.location.replace("index.html");
+	}
 }
