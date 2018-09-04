@@ -1,8 +1,9 @@
-TARGET = dist
+VERSION = 1.11
+TARGET  = dist
 
 .PHONY: all clean
 
-all: $(addprefix $(TARGET)/,$(wildcard img/*)) $(addprefix $(TARGET)/,$(wildcard css/*)) $(TARGET)/js/all.js $(TARGET)/js/pwn.js $(TARGET)/index.html $(TARGET)/incompatible.html $(TARGET)/payload $(TARGET)/manifest.appcache $(TARGET)/favicon.ico $(TARGET)/bootstrap/Meridian.tar.xz # $(TARGET)/bootstrap/DH.tar.xz
+all: $(addprefix $(TARGET)/,$(wildcard img/*)) $(addprefix $(TARGET)/,$(wildcard css/*)) $(TARGET)/js/all.js $(TARGET)/js/pwn.js $(TARGET)/index.html $(TARGET)/payload $(TARGET)/manifest.appcache $(TARGET)/favicon.ico $(TARGET)/bootstrap/Meridian.tar.xz # $(TARGET)/bootstrap/DH.tar.xz
 
 $(TARGET)/img/%: img/% | $(TARGET)/img
 	cp $^ $@
@@ -19,9 +20,6 @@ $(TARGET)/js/pwn.js: js/pwn.js | $(TARGET)/js # minify only
 $(TARGET)/index.html: index.html | $(TARGET)
 	perl -pe 'BEGIN{undef $$/;} s:<!--mergestart-->.*?<!--mergeend-->:<script src="js/all.js"></script>:sg;' $^ >$@
 
-$(TARGET)/incompatible.html: incompatible.html | $(TARGET)
-	cp $^ $@
-
 $(TARGET)/payload: ../glue/payload | $(TARGET)
 	cp $^ $@
 
@@ -32,7 +30,7 @@ $(TARGET)/bootstrap/Meridian.tar.xz: ../glue/dep/Meridian/Meridian.tar.xz | $(TA
 	cp $^ $@
 
 $(TARGET)/manifest.appcache: manifest.appcache | $(TARGET)
-	cp $^ $@
+	sed -E 's/__VERSION__/$(VERSION)/g' $^ >$@
 
 $(TARGET)/favicon.ico: favicon.ico | $(TARGET)
 	cp $^ $@
@@ -57,3 +55,6 @@ $(TARGET):
 
 clean:
 	rm -rf $(TARGET)
+
+distclean: clean
+	$(MAKE) -C ../glue distclean

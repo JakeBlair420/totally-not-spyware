@@ -431,7 +431,7 @@ function go()
             }
             catch(e)
             {
-                fail(`Error: ${e}\n${e.stack}`);
+                fail('Error: ' + e + (e != null ? '\n' + e.stack : ''));
             }
         });
         req.addEventListener('error', function(ev)
@@ -442,6 +442,6 @@ function go()
     }
     catch(e)
     {
-        fail(`Error: ${e}\n${e.stack}`);
+        fail('Error: ' + e + (e != null ? '\n' + e.stack : ''));
     }
 }

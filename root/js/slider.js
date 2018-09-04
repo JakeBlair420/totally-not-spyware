@@ -1,11 +1,30 @@
 // slider logic from JailbreakMe (Star)
 // with foxlet&stek additions (added MNT_NOSUID)
 
-window.addEventListener('DOMContentLoaded', function()
+window.addEventListener('load', function()
 {
-    (function(onSlid) {
+    var wrapper =
+    {
+        onSlid: function()
+        {
+            let logo = document.getElementById('logo');
+            logo.parentNode.removeChild(logo);
+            document.body.className = 'wait';
+            document.getElementById('notice').textContent = 'Running exploit...';
+
+            window.setTimeout(function(){
+                window.go();
+            }, 10);
+        },
+    };
+
+    (function() {
         var thumbtack = document.getElementById('thumbtack');
         var hint = document.getElementById('hint');
+        if(!thumbtack || !hint)
+        {
+            return;
+        }
 
         var hintHideRatio = 1/4;
         var slidRatio = 0.9;
@@ -50,7 +69,12 @@ window.addEventListener('DOMContentLoaded', function()
 
             if (left/maxLeft >= slidRatio) {
                 set_left(maxLeft);
-                onSlid();
+                if(wrapper.onSlid)
+                {
+                    var onSlid = wrapper.onSlid;
+                    wrapper.onSlid = undefined;
+                    onSlid();
+                }
                 return false;
             }
 
@@ -76,16 +100,7 @@ window.addEventListener('DOMContentLoaded', function()
         window.onmouseup = e => onEnd();
 
         return this;
-    })(() => {
-        let logo = document.getElementById('logo');
-        logo.parentNode.removeChild(logo);
-        document.body.className = 'wait';
-        document.getElementById('notice').textContent = 'Running exploit...';
-
-        window.setTimeout(function(){
-            window.go();
-        }, 10);
-    });
+    })();
 
     // Disable vertical scrolling in webapp
     window.ontouchstart = function(e) {

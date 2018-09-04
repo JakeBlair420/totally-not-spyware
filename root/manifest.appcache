@@ -1,11 +1,9 @@
 CACHE MANIFEST
-# v1.10
+# v__VERSION__
 
 CACHE:
 index.html
-incompatible.html
-css/default.css
-css/incompatible.css
+css/all.css
 js/all.js
 js/pwn.js
 img/amazing.png
