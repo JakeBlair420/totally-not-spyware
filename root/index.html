@@ -11,6 +11,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="img/ios-icon.png">
 <link href="img/ios-launch.png" media="(device-width: 414px) and (-webkit-device-pixel-ratio: 3)" rel="apple-touch-startup-image" />
+<script>
+window.onerror = function(ev)
+{
+    alert('Uncaught error: ' + ev);
+};
+</script>
 <!--mergestart-->
 <script src="js/utils.js"></script>
 <script src="js/version.js"></script>
