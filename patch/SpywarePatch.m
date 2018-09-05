@@ -110,7 +110,8 @@ char *clobberStructures_syms[] = {
 /**********************        Important defs      *********************/
 /* Those might change with the JSC version...                          */
 /* - You can get CREATE_THIS and the other one from the NodeType enum  */
-/*   under JSC/dfg/DFGNodeType.h                                       */
+/*   under JSC/dfg/DFGNodeType.h from here:                            */
+/*   https://svn.webkit.org/repository/webkit/releases/Apple/          */
 /* - the node op offset is inside of a struct just open a disassembler */
 /*   and go to of the clobberize symbols, find the jumptable code,     */
 /*   now the var which is used as an index and which is modified with  */
@@ -220,6 +221,8 @@ static void doit(void)
 
         /* set permissions */
         // TODO: make this work on IOS 11
+		// this works on 10 tho so we should have two diffrent versions, for 11, we should port https://github.com/comex/substitute/blob/95f2beda374625dd503bfb51a758b6f6ced57887/lib/darwin/execmem.c#L373-L447 
+		// ofc without all the manual stuff we can use the real methods there
         kern_return_t ret = mach_vm_protect(mach_task_self(), jumptable_addr, 0x1000, 0, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
         if(ret != 0)
         {
