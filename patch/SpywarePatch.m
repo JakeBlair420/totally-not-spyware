@@ -4,7 +4,7 @@
 /*               templates                                             */
 /* Patch commit: b602e9d167b2c53ed96a42ed3ee611d237f5461a              */
 /* Usage:        inject the dylib into the WebContent Process          */
-/* Dependencies: subsitiude by @comex (tested with coolstars fork)     */
+/* Dependencies: substitute by @comex (tested with coolstars fork)     */
 /* TODO:         At the moment it crashes because of the not working   */
 /*               jumptable patch                                       */
 /* Notes:        - Uses code from siguza (Thank you) for finding       */
@@ -121,14 +121,14 @@ char *clobberStructures_syms[] = {
 /***********************************************************************/
 
 #if 0
-#   define CREATE_THIS 7                                                                              /* the value of createThis in the enum */
-#   define VALUEADD 71                                                                                /* the value of ValueAdd in the enum */
+#   define CREATE_THIS 7                                                                              /* the value of createThis in the enum            */
+#   define VALUEADD 71                                                                                /* the value of ValueAdd in the enum              */
 #else
-#   define CREATE_THIS 6                                                                              /* the value of createThis in the enum */
-#   define VALUEADD 68                                                                                /* the value of ValueAdd in the enum */
+#   define CREATE_THIS 6                                                                              /* the value of createThis in the enum            */
+#   define VALUEADD 68                                                                                /* the value of ValueAdd in the enum              */
 #endif
-#define OFFSET_NODE_OP 0x38                                                                        /* offset of op in the Node struct */
-#define JSC_PATH "/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore"              /* path to JSC, used in the get_addr function */
+#define OFFSET_NODE_OP 0x38                                                                           /* offset of op in the Node struct                */
+#define JSC_PATH "/System/Library/Frameworks/JavaScriptCore.framework/JavaScriptCore"                 /* path to JSC, used in the get_addr function     */
 
 /**********************        Variable  defs      *********************/
 
