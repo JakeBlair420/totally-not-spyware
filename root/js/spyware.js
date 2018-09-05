@@ -552,7 +552,10 @@
 		for (var index = 0; index < params.length; index++) {
 			    param = params[index].split("=");
 				if (param[0] == "debug_with_vtab_smash") {
-					alert("You are running a debug feature, which will cause instability, if you weren't instructed to do so, please stop using it!");
+					if (!confirm("You are running a debug feature, which will cause instability, if you weren't instructed to do so, please stop using it!")) {
+						alert("Ok pls remove the arg and reload the site");
+						throw "stop yo";
+					}
 					var max_smash = parseInt(decodeURIComponent(param[1]));
 					if (isNaN(max_smash)) {
 						throw "w00t I said ints...";
@@ -562,6 +565,24 @@
 						memory.writeInt64(Add(vtab,i), Add(smash_int,i));
 					}
 					alert("Smashed vtab! Pls get the newest crash log and show it to us");
+				}
+				if (param[0] == "dump_el_obj") {
+					if (!confirm("You are running a debug feature, if you weren't instructed to do so, please stop using it!")) {
+						alert("Ok pls remove the arg and reload the site");
+						throw "stop yo";
+					}
+					var how_much = parseInt(decodeURIComponent(param[1]));
+					if (isNaN(max_smash)) {
+						throw "w00t I said ints...";
+					}
+					how_much = how_much * 8; 
+					data = "";
+					for (let i = 0; i < how_much; i += 8) {
+						data += hexlify(memory.readInt64(Add(wrapper_addr,i)).bytes) + "\n";
+					}
+					document.write(data);
+					alert("Ok stoped running code now");
+					throw "bye bye";
 				}
 		}
 
