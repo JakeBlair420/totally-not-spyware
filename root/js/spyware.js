@@ -572,7 +572,7 @@
 						throw "stop yo";
 					}
 					var how_much = parseInt(decodeURIComponent(param[1]));
-					if (isNaN(max_smash)) {
+					if (isNaN(how_much)) {
 						throw "w00t I said ints...";
 					}
 					how_much = how_much * 8; 
