@@ -13,7 +13,7 @@ DEP_C    = $(patsubst $(SRC)/%.m,%,$(wildcard $(SRC)/*.m))
 DEP_CXX  = $(patsubst $(SRC)/%.mm,%,$(wildcard $(SRC)/*.mm))
 IGXX     = xcrun -sdk iphoneos clang++ -arch arm64
 FLAGS   ?= -Wall -O3 -fobjc-arc -miphoneos-version-min=10.0 $(CFLAGS)
-LFLAGS  ?= -Wl,-x -Wl,-dead_strip -L$(wildcard $(DEP)/curl-*)/lib/.libs -lcurl -L$(DEP)/Meridian -lMeridian -L$(LIB) -ldoubleH3lix -loffsetfinder64 -limg4tool -lplist++ -lplist -lz -larchive -F. -framework IOKit -framework Security $(LDFLAGS)
+LFLAGS  ?= -Wl,-x -Wl,-dead_strip -flto -L$(wildcard $(DEP)/curl-*)/lib/.libs -lcurl -L$(DEP)/Meridian -lMeridian -L$(LIB) -ldoubleH3lix -loffsetfinder64 -limg4tool -lplist++ -lplist -lcompression -lz -larchive -F. -framework IOKit -framework Security $(LDFLAGS)
 ifdef JIT
 LFLAGS  += -Wl,-exported_symbols_list,keep.txt
 endif
