@@ -35,11 +35,14 @@ static int grabBootstrapFiles(void)
 }
 #endif
 
+#define POPUP(title, str, args ...) \
+    NSString *nsStr = [NSString stringWithFormat:@str, ##args]; \
+    popup(CFSTR(title), (__bridge CFStringRef)nsStr, CFSTR("quit"), CFSTR("fuck"), CFSTR("shit"))
+
 #define FAIL(str, args ...) \
     do { \
         LOG(str, ##args); \
-        NSString *nsstr = [NSString stringWithFormat:@str, ##args]; \
-        popup(CFSTR("spyware fail"), (__bridge CFStringRef)nsstr, CFSTR("quit"), CFSTR("fuck"), CFSTR("shit")); \
+        POPUP("spyware fail", str, ##args); \
     } while (0);
 
 NSFileManager *fileMgr;
@@ -62,6 +65,13 @@ int makeShitHappen() {
     }
 
     fileMgr = [NSFileManager defaultManager];
+
+    if (file_exists("/private/var/lib/dpkg/status") == 0 &&
+        file_exists("/.meridian_installed") != 0)
+    {
+        POPUP("jelbrek detect !", "this device has already been jailbroken with another tool. please run Cydia Eraser to wipe your device before attempting to jailbreak with Meridian");
+        return 1;
+    }
 
     // set up stuff
     init_patchfinder(NULL);
