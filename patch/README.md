@@ -2,7 +2,7 @@
 Commit: https://github.com/WebKit/webkit/commit/b602e9d167b2c53ed96a42ed3ee611d237f5461a
 Changes:
 They added a clobberWorld call here: https://github.com/WebKit/webkit/blob/b602e9d167b2c53ed96a42ed3ee611d237f5461a/Source/JavaScriptCore/dfg/DFGAbstractInterpreterInlines.h#L2277
-And modified a lot in the method here: https://github.com/WebKit/webkit/blob/master/Source/JavaScriptCore/dfg/DFGClobberize.h#L45
+And modified a lot in the method here: https://github.com/WebKit/webkit/blob/d9cd5e31e4ebd912fee7e53295d847d16e1b229b/Source/JavaScriptCore/dfg/DFGClobberize.h#L45
 
 I don't really know how those changes affected execution, because I don't know the code base really well, but feel free to let me know.
 
@@ -18,22 +18,28 @@ Because they only moved stuff around in clobberize, we focues on patching the ju
 We looked at the patched version and found out that now CreateThis does the same as VALUEADD (are inside of the same case in the big switch case statment).
 
 For big switch case statments, the compiler generates jumptables, which look kinda like this:
-- mov <reg1>, 0x3ff => as that is typical for the NodeType value
-- and <reg3>,<reg1>,<reg2> or and <reg3>,<reg2>,<reg1>
+```
+mov <reg1>, 0x3ff => as that is typical for the NodeType value
+and <reg3>,<reg1>,<reg2> or and <reg3>,<reg2>,<reg1>
+```
 This can also be represented as:
-- and <reg3>, <reg1>, 0x3ff
+`and <reg3>, <reg1>, 0x3ff`
 
 (reg3 is now Node->op)
-- cmp <reg3>, <intermidiate> => the intermidiate could change between version so we just search for the instruction
-- bhi <some addr> => jumps if the number is outside of the switch case range
-- adrp <reg4>, <some addr>
-- add <reg4>, <reg4>, <some value> => we need to get the value of reg4 now as this is our jumptable address
+```
+cmp <reg3>, <intermidiate> => the intermidiate could change between version so we just search for the instruction
+bhi <some addr> => jumps if the number is outside of the switch case range
+adrp <reg4>, <some addr>
+add <reg4>, <reg4>, <some value> => we need to get the value of reg4 now as this is our jumptable address
+```
 
 (now reg4 contains the jumptable address)
+```
 - ldrb <reg5>,[<reg4>,<reg3>,uxtw] (can also be ldrsw)
 - adr <reg6>, <some value>
 - add <reg7>, <reg6>, <reg5>, (sxtb #2)
 - br <reg7>
+```
 
 The 0x3ff is a "magic" value, because the Nodetype is only a few bytes long, the value loaded is anded with that to mask the others out.
 We use that as a safty mechanism to make sure that we found the right jumptable code.
@@ -44,7 +50,7 @@ After that we have to switch permissions back as the jumptable array is inlined,
 While testing we also noticied that the jumptable code sometimes gets spilt up by the compiler and some asm is moved inbetween instructions, so we also encount for that in the finder.
 
 In the end there was one big question, how can we find the value for CREATETHIS and VALUEADD? We looked around, but there are no methods which are using it in a way we can easily extract.
-Luckily, as Webkit is open source, Apple also posts a version on every IOS release on the svn server:  https://svn.webkit.org/repository/webkit/releases/Apple/
+Luckily, as Webkit is open source, Apple also posts a version on every IOS release on the svn server: https://svn.webkit.org/repository/webkit/releases/Apple/
 There is a problem for betas tho and we didn't found a solution for that yet.
 
 
