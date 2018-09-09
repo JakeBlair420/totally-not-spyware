@@ -80,7 +80,7 @@ function pwn(binary) {
             var addr = this.addrof({a: 0x1337})
             var x = this.fakeobj(addr)
             if (x.a != 0x1337) {
-                fail('stage1')
+                fail('webkit exploit failed: please reload the page or restart the app and wait a few seconds before retrying')
             }
         },
     }
