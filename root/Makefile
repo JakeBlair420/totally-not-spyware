@@ -1,4 +1,4 @@
-VERSION = 1.14
+VERSION = 1.15
 TARGET  = dist
 
 .PHONY: all clean
