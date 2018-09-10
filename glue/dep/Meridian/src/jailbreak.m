@@ -20,6 +20,7 @@
 #include "offsetdump.h"
 #include "offsetfinder.h"
 #include "patchfinder64.h"
+#include "preferences.h"
 #include "root-rw.h"
 #include "nonce.h"
 #include "nvpatch.h"
@@ -257,12 +258,15 @@ int makeShitHappen() {
         fclose(fd);
     }
 
-    // launch dropbear
-    LOG("launching dropbear...");
-    ret = launchDropbear();
-    if (ret != 0) {
-        FAIL("failed to launch dropbear! ret: %d", ret);
-        return 1;
+    if (StartDropbear)
+    {
+        // launch dropbear
+        LOG("launching dropbear...");
+        ret = launchDropbear();
+        if (ret != 0) {
+            FAIL("failed to launch dropbear! ret: %d", ret);
+            return 1;
+        }
     }
 
     // link substitute stuff
@@ -279,6 +283,9 @@ int makeShitHappen() {
     if (file_exists("/usr/lib/tweaks/MobileSafety.plist") == 0) {
         unlink("/usr/lib/tweaks/MobileSafety.plist");
     }
+
+    // load prefs from /meridian/preferences.plist file 
+    initAllPreferences();
 
     // start jailbreakd
     LOG("starting jailbreakd...");
@@ -301,33 +308,30 @@ int makeShitHappen() {
         return 1;
     }
 
-    // // Get generator from settings
-    // char nonceRaw[19];
-    // sprintf(nonceRaw, "0x%016llx", getBootNonceValue());
-    // nonceRaw[18] = '\0';
-    const char *nonceRaw = "0x62b2fe45ea2c3324";
-
-    // // Set new nonce (if required)
-    const char *boot_nonce = copy_boot_nonce();
-    if (boot_nonce == NULL ||
-        strcmp(boot_nonce, nonceRaw) != 0) {
+    // Set new nonce (if required)
+    const char *current_nonce = copy_boot_nonce();
+    if (current_nonce == NULL ||
+        strcmp(current_nonce, BootNonce) != 0) {
         LOG("setting boot-nonce...");
 
-        set_boot_nonce(nonceRaw);
+        set_boot_nonce(BootNonce);
 
         LOG("done!");
     }
 
-    if (boot_nonce != NULL) {
-        free((void *)boot_nonce);
+    if (current_nonce != NULL) {
+        free((void *)current_nonce);
     }
 
-    // load launchdaemons
-    LOG("loading launchdaemons...");
-    ret = loadLaunchDaemons();
-    if (ret != 0) {
-        FAIL("failed to load launchdaemons, ret: %d", ret);
-        return 1;
+    if (StartLaunchDaemons)
+    {
+        // load launchdaemons
+        LOG("loading launchdaemons...");
+        ret = loadLaunchDaemons();
+        if (ret != 0) {
+            FAIL("failed to load launchdaemons, ret: %d", ret);
+            return 1;
+        }
     }
 
     if (file_exists("/.meridian_installed") != 0) {
@@ -518,21 +522,31 @@ int defecateAmfi() {
 }
 
 int launchDropbear() {
+    NSMutableArray *args = [NSMutableArray arrayWithCapacity:11];
+
+    [args addObject:@"/meridian/dropbear/dropbear"];
+
+    switch (DropbearPortSetting)
+    {
+        case DropbearPort22:
+            [args addObjectsFromArray:@[@"-p", @"22"]];
+            break;
+        case DropbearPort2222:
+            [args addObjectsFromArray:@[@"-p", @"2222"]];
+            break;
+        case DropbearPortBoth:
+            [args addObjectsFromArray:@[@"-p", @"22", @"-p", @"2222"]];
+            break;
+    }
+
+    [args addObjectsFromArray:@[@"-F", @"-R", @"-E", @"-m", @"-S", @"/"]];
+
     NSMutableDictionary *newPrefs = [NSMutableDictionary dictionaryWithContentsOfFile:@"/meridian/dropbear/dropbear.plist"];
     
-    newPrefs[@"ProgramArguments"] = @[
-        @"/meridian/dropbear/dropbear",
-        @"-p 22",
-        @"-p 2222",
-        @"-F",
-        @"-R",
-        @"-E",
-        @"-m",
-        @"-S",
-        @"/"
-    ];
+    newPrefs[@"ProgramArguments"] = args;
+    NSLog(@"launching dropbear with args %@", args);
 
-    [newPrefs writeToFile:@"/meridian/dropbear/dropbear.plist" atomically:false];
+    [newPrefs writeToFile:@"/meridian/dropbear/dropbear.plist" atomically:FALSE];
 
     return start_launchdaemon("/meridian/dropbear/dropbear.plist");
 }
@@ -585,9 +599,12 @@ int startJailbreakd() {
     rv = inject_trust("/usr/lib/pspawn_hook.dylib");
     if (rv != 0) return 2;
 
-    // inject pspawn_hook.dylib to launchd
-    rv = inject_library(1, "/usr/lib/pspawn_hook.dylib");
-    if (rv != 0) return 3;
+    if (TweaksEnabled)
+    {
+        // inject pspawn_hook.dylib to launchd
+        rv = inject_library(1, "/usr/lib/pspawn_hook.dylib");
+        if (rv != 0) return 3;
+    }
 
     return 0;
 }
