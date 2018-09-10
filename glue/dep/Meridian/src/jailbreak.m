@@ -197,6 +197,9 @@ int makeShitHappen() {
 
     // dump offsets to file for later use (/meridian/offsets.plist)
     dumpOffsetsToFile(offsets, kernel_base, kslide);
+    
+    // load prefs from /meridian/preferences.plist file 
+    initAllPreferences();
 
     // patch amfid
     LOG("patching amfid...");
@@ -283,9 +286,6 @@ int makeShitHappen() {
     if (file_exists("/usr/lib/tweaks/MobileSafety.plist") == 0) {
         unlink("/usr/lib/tweaks/MobileSafety.plist");
     }
-
-    // load prefs from /meridian/preferences.plist file 
-    initAllPreferences();
 
     // start jailbreakd
     LOG("starting jailbreakd...");

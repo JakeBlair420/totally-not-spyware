@@ -18,7 +18,7 @@ NSDictionary *getDefaultPreferences()
 {
     NSMutableDictionary *prefsDict = [[NSMutableDictionary alloc] init];
 
-    [prefsDict setObject:@"boot_nonce" forKey:@"BootNonce"];
+    [prefsDict setObject:@ELECTRA_GENERATOR forKey:@"BootNonce"];
     [prefsDict setObject:@"Both" forKey:@"DropbearPort"];
     [prefsDict setObject:@YES forKey:@"StartDropbear"];
     [prefsDict setObject:@YES forKey:@"StartLaunchDaemons"];
