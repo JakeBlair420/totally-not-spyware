@@ -47,7 +47,7 @@ void initAllPreferences()
         LOG("BootNonce field found, using default...");
         BootNonce = strdup(ELECTRA_GENERATOR);
     }
-    else if ([prefsDict[@"BootNonce"] rangeOfString:@"^0x[0-9a-fA-F]+$" options:NSRegularExpressionSearch].location != NSNotFound)
+    else if ([prefsDict[@"BootNonce"] rangeOfString:@"^0x[0-9a-fA-F]{1,16}$" options:NSRegularExpressionSearch].location != NSNotFound)
     {
         LOG("failed to set boot nonce: invalid string '%s'. using default...", [prefsDict[@"BootNonce"] UTF8String]);
         BootNonce = strdup(ELECTRA_GENERATOR);
