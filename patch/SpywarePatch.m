@@ -57,6 +57,7 @@ xcrun -sdk iphoneos cc -arch arm64 -o SpywarePatch.dylib -shared SpywarePatch.m 
 
 extern void MSHookFunction(void *symbol, void *hook, void **old);
 extern kern_return_t mach_vm_protect(task_t task, mach_vm_address_t address, mach_vm_size_t size, boolean_t max, vm_prot_t prot);
+extern kern_return_t mach_vm_remap(vm_map_t target_task, mach_vm_address_t *target_address, mach_vm_size_t size, mach_vm_offset_t mask, int flags, vm_map_t src_task, mach_vm_address_t src_address, boolean_t copy, vm_prot_t *cur_protection, vm_prot_t *max_protection, vm_inherit_t inheritance);
 
 /**********************        Function Defs       *********************/
 /* => just search for the function to get an understanding of what     */
@@ -120,9 +121,9 @@ char *clobberStructures_syms[] = {
 /*                                                                     */
 /***********************************************************************/
 
-#if 0
-#   define CREATE_THIS 7                                                                              /* the value of createThis in the enum            */
-#   define VALUEADD 71                                                                                /* the value of ValueAdd in the enum              */
+#if 1
+#   define CREATE_THIS 6                                                                              /* the value of createThis in the enum            */
+#   define VALUEADD 65                                                                                /* the value of ValueAdd in the enum              */
 #else
 #   define CREATE_THIS 6                                                                              /* the value of createThis in the enum            */
 #   define VALUEADD 68                                                                                /* the value of ValueAdd in the enum              */
@@ -219,10 +220,11 @@ static void doit(void)
         }
         NSLog(@"Found jumptable (max: 0x%x) @ 0x%llx\n", max_val, jumptable_addr);
 
+#if 0
         /* set permissions */
         // TODO: make this work on IOS 11
-		// this works on 10 tho so we should have two diffrent versions, for 11, we should port https://github.com/comex/substitute/blob/95f2beda374625dd503bfb51a758b6f6ced57887/lib/darwin/execmem.c#L373-L447 
-		// ofc without all the manual stuff we can use the real methods there
+        // this works on 10 tho so we should have two diffrent versions, for 11, we should port https://github.com/comex/substitute/blob/95f2beda374625dd503bfb51a758b6f6ced57887/lib/darwin/execmem.c#L373-L447 
+        // ofc without all the manual stuff we can use the real methods there
         kern_return_t ret = mach_vm_protect(mach_task_self(), jumptable_addr, 0x1000, 0, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
         if(ret != 0)
         {
@@ -240,6 +242,39 @@ static void doit(void)
             NSLog(@"Second mach_vm_protect failed with %d! Abort\n", ret);
             return;
         }
+#else
+        vm_size_t page_size = 0;
+        host_page_size(mach_task_self(),&page_size);
+        NSLog(@"Working with a page size of %lx\n",page_size);
+        void *new_page = mmap(NULL,page_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
+        if (new_page == MAP_FAILED) {
+            NSLog(@"mmap failed, errno=%d (%s)\n",errno,strerror(errno));
+        }
+        kern_return_t ret = vm_copy(mach_task_self(), jumptable_addr & ~(page_size-1), page_size, (vm_address_t) new_page);
+        if (ret != 0) {
+            NSLog(@"vm_copy failed:%d\n",ret);
+        }
+        errno = 0;
+        void *new_map = mmap((void*)(jumptable_addr & ~(page_size-1)), page_size, PROT_NONE, MAP_ANON | MAP_SHARED | MAP_FIXED, -1, 0);
+        if (new_map == MAP_FAILED) {
+            NSLog(@"Second mmap failed:%d (%s)\n",errno,strerror(errno));
+        }
+				
+        /* patch jumptable */
+        uint32_t *jumptable = (uint32_t*)new_page;
+        jumptable[CREATE_THIS] = jumptable[VALUEADD];
+
+        if (mprotect(new_page, page_size, PROT_READ | PROT_EXEC)) {
+            NSLog(@"mprotect failed\n");
+        }
+        vm_prot_t a, b;
+        mach_vm_address_t target = jumptable_addr;
+        ret = mach_vm_remap(mach_task_self(), &target, page_size, 0, VM_FLAGS_OVERWRITE, mach_task_self(), (mach_vm_address_t) new_page, 1, &a, &b,0);
+        if (ret) {
+            NSLog(@"vm_remap failed:%d\n",ret);
+        }
+        munmap(new_page, page_size);
+#endif
         i++;
     }
     /* second executeEffects */
