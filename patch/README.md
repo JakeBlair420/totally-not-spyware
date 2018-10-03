@@ -59,8 +59,8 @@ The clobberWorld patch is the easier one, there we can just use substitute to ho
 You might ask yourself now, wtf, in the original patch the clobberWorld call happens before the forNode call and yeah that's the case, but we asked Samuel Groß if it would make a difference and he said it won't.
 
 # What needs to be done/is broke
-- hardcoded offsets: The enum values from the website aren't added to the code yet and we still have just two defines hardcoded in, that needs to change for the release with multiple firmware versions
-- switching memory to rw- and back to r-x: on IOS 11 things change and now the second call to vm_protect fails, this should be solvable by porting the substitute implementation here:  https://github.com/comex/substitute/blob/95f2beda374625dd503bfb51a758b6f6ced57887/lib/darwin/execmem.c#L373-L447
-- the patch crashes on ios 10 with a null deref: this needs to be debugged and fixed, I have no idea why it happens yet...
+- [ ] hardcoded offsets: The enum values from the website aren't added to the code yet and we still have just two defines hardcoded in, that needs to change for the release with multiple firmware versions
+- [x] switching memory to rw- and back to r-x: on IOS 11 things change and now the second call to vm_protect fails, this should be solvable by porting the substitute implementation here:  https://github.com/comex/substitute/blob/95f2beda374625dd503bfb51a758b6f6ced57887/lib/darwin/execmem.c#L373-L447
+- [ ] the patch crashes on ios 10 with a null deref: this needs to be debugged and fixed, I have no idea why it happens yet...
 
 ~ litlelailo
