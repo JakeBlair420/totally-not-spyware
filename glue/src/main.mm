@@ -50,11 +50,16 @@ __attribute__((noreturn)) static void die()
         IOConnectCallAsyncStructMethod(connect, 17, port, &references, 1, input, sizeof(input), NULL, NULL);
 }
 
-extern "C" CFOptionFlags popup(CFStringRef title, CFStringRef text, CFStringRef buttonOne, CFStringRef buttonTwo, CFStringRef buttonThree)
+CFOptionFlags popupTimeout(CFStringRef title, CFStringRef text, CFStringRef buttonOne, CFStringRef buttonTwo, CFStringRef buttonThree, CFTimeInterval timeout)
 {
     CFOptionFlags flags;
-    CFUserNotificationDisplayAlert(0, 0, NULL, NULL, NULL, title, text, buttonOne, buttonTwo, buttonThree, &flags);
+    CFUserNotificationDisplayAlert(timeout, 0, NULL, NULL, NULL, title, text, buttonOne, buttonTwo, buttonThree, &flags);
     return flags & 0x3;
+}
+
+extern "C" CFOptionFlags popup(CFStringRef title, CFStringRef text, CFStringRef buttonOne, CFStringRef buttonTwo, CFStringRef buttonThree)
+{
+    return popupTimeout(title, text, buttonOne, buttonTwo, buttonThree, 0);
 }
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -122,7 +127,7 @@ int main(void)
     @autoreleasepool
     {
         LOG("we out here\n");
-        LOG("v1.16\n");
+        LOG("v1.17\n");
 
         tihmstar::offsetfinder64 fi("/System/Library/Caches/com.apple.kernelcaches/kernelcache");
 
@@ -147,13 +152,13 @@ int main(void)
         if(v0rtex(off, &fuck, &fu) != KERN_SUCCESS)
         {
             LOG("Kernel exploit failed, goodbye...");
-            popup(CFSTR("Kernel exploit failed"), CFSTR("Your device will reboot now..."), CFSTR("OK"), NULL, NULL);
+            popupTimeout(CFSTR("Kernel exploit failed"), CFSTR("Your device will reboot now..."), CFSTR("OK"), NULL, NULL, 5);
             die();
             return -1;
         }
         LOG("Exploit done");
 
-        popup(CFSTR("Spyware announcement"), CFSTR("Kernel has been pwned >:D"), CFSTR("noot noot"), NULL, NULL);
+        popupTimeout(CFSTR("Spyware announcement"), CFSTR("Kernel has been pwned >:D"), CFSTR("noot noot"), NULL, NULL, 5);
 
         CURLcode r = curl_global_init(CURL_GLOBAL_ALL);
         if(r != 0)
