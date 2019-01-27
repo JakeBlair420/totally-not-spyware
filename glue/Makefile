@@ -13,7 +13,7 @@ DEP_C    = $(patsubst $(SRC)/%.m,%,$(wildcard $(SRC)/*.m))
 DEP_CXX  = $(patsubst $(SRC)/%.mm,%,$(wildcard $(SRC)/*.mm))
 IGXX     = xcrun -sdk iphoneos clang++ -arch arm64
 FLAGS   ?= -Wall -O3 -fobjc-arc -miphoneos-version-min=10.0 $(CFLAGS)
-LFLAGS  ?= -Wl,-x -Wl,-dead_strip -flto -L$(wildcard $(DEP)/curl-*)/lib/.libs -lcurl -L$(DEP)/Meridian -lMeridian -L$(LIB) -ldoubleH3lix -loffsetfinder64 -limg4tool -lplist++ -lplist -lcompression -lz -larchive -F. -framework IOKit -framework Security $(LDFLAGS)
+LFLAGS  ?= -Wl,-x -Wl,-dead_strip -flto -L$(wildcard $(DEP)/curl-*)/lib/.libs -lcurl -L$(DEP)/Meridian -lMeridian -L$(DEP)/doubleH3lix -ldoubleH3lix -L$(LIB) -loffsetfinder64 -limg4tool -lplist++ -lplist -lcompression -lz -larchive -F. -framework IOKit -framework Security $(LDFLAGS)
 ifdef JIT
 LFLAGS  += -Wl,-exported_symbols_list,keep.txt
 endif
@@ -23,7 +23,7 @@ FILES   := $(addsuffix .o, $(addprefix $(OBJ)/c/, $(DEP_C))) $(addsuffix .o, $(a
 
 all: $(TARGET)
 
-$(TARGET): $(wildcard $(DEP)/curl-*)/lib/.libs/libcurl.a $(DEP)/Meridian/libMeridian.a $(FILES)
+$(TARGET): $(wildcard $(DEP)/curl-*)/lib/.libs/libcurl.a $(DEP)/doubleH3lix/libdoubleH3lix.a $(DEP)/Meridian/libMeridian.a $(FILES)
 	$(IGXX) -o $@ $(FLAGS) $(GEN) $(FILES) $(LFLAGS)
 
 $(OBJ)/c/%.o: $(SRC)/%.m | $(OBJ)/c
@@ -38,6 +38,9 @@ $(OBJ)/c:
 $(OBJ)/c++:
 	mkdir -p $@
 
+$(DEP)/doubleH3lix/libdoubleH3lix.a:
+	$(MAKE) -C $(DEP)/doubleH3lix headless
+
 $(DEP)/Meridian/libMeridian.a:
 	$(MAKE) -C $(DEP)/Meridian all
 
@@ -49,6 +52,7 @@ clean:
 	rm -rf $(TARGET) $(OBJ)
 
 distclean: clean
+	$(MAKE) -C $(DEP)/doubleH3lix clean
 	$(MAKE) -C $(DEP)/Meridian clean
 ifneq (,$(wildcard $(DEP)/curl-*/Makefile))
 	$(MAKE) -C $(DEP)/curl-* distclean

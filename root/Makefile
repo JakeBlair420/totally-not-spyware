@@ -1,9 +1,9 @@
-VERSION = 1.17
+VERSION = 1.18
 TARGET  = dist
 
 .PHONY: all clean
 
-all: $(addprefix $(TARGET)/,$(wildcard img/*)) $(addprefix $(TARGET)/,$(wildcard css/*)) $(TARGET)/js/all.js $(TARGET)/js/pwn.js $(TARGET)/index.html $(TARGET)/payload $(TARGET)/manifest.appcache $(TARGET)/favicon.ico $(TARGET)/bootstrap/Meridian.tar.xz # $(TARGET)/bootstrap/DH.tar.xz
+all: $(addprefix $(TARGET)/,$(wildcard img/*)) $(addprefix $(TARGET)/,$(wildcard css/*)) $(TARGET)/js/all.js $(TARGET)/js/pwn.js $(TARGET)/index.html $(TARGET)/payload $(TARGET)/manifest.appcache $(TARGET)/favicon.ico $(TARGET)/bootstrap/Meridian.tar.xz $(TARGET)/bootstrap/DH.tar.xz
 
 $(TARGET)/img/%: img/% | $(TARGET)/img
 	cp $^ $@
@@ -26,6 +26,9 @@ $(TARGET)/payload: ../glue/payload | $(TARGET)
 ../glue/payload:
 	JIT=1 $(MAKE) -C ../glue all
 
+$(TARGET)/bootstrap/DH.tar.xz: ../glue/dep/doubleH3lix/DH.tar.xz | $(TARGET)/bootstrap
+	cp $^ $@
+
 $(TARGET)/bootstrap/Meridian.tar.xz: ../glue/dep/Meridian/Meridian.tar.xz | $(TARGET)/bootstrap
 	cp $^ $@
 
@@ -34,6 +37,9 @@ $(TARGET)/manifest.appcache: manifest.appcache | $(TARGET)
 
 $(TARGET)/favicon.ico: favicon.ico | $(TARGET)
 	cp $^ $@
+
+../glue/dep/doubleH3lix/DH.tar.xz:
+	$(MAKE) -C ../glue/dep/doubleH3lix bootstrap
 
 ../glue/dep/Meridian/Meridian.tar.xz:
 	$(MAKE) -C ../glue/dep/Meridian bootstrap
