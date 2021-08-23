@@ -16,12 +16,6 @@ DoubleH3lix and Meridian can be built independently into static libraries with `
 Those are then used to build the `payload` in `/glue`, which is the binary that is ran from JIT after the WebKit exploit. Can be built with just a `make`, and will build all dependencies as needed.  
 And that is all finally strung together with the WebKit exploit by running `make` in `/root`, which will again build dependencies as needed.
 
-**Caveat**:  
-There is a hand-written assembly routine called `genesis`, which is used to link the Mach-O on JIT memory before it can be used.  
-This routine is not provided here, as a lowkey attempt at stopping people who don't know what they're doing from messing with this.  
-People who know what they're doing can just read it at [totally-not.spyware.lol/payload](https://totally-not.spyware.lol/payload) ;)  
-To build the project without genesis, run `make` first in `/glue` separately, then in `/root`.
-
 ### Patch
 
 We originally wanted to backport the WebKit patch to 10.x, but ultimately gave up.  
