@@ -57,6 +57,7 @@ do \
     ASSERT("curl_easy_setopt(CURLOPT_WRITEDATA)",        curl_easy_setopt(curl, CURLOPT_WRITEDATA, f));
     ASSERT("curl_easy_setopt(CURLOPT_XFERINFOFUNCTION)", curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progress_callback));
     ASSERT("curl_easy_setopt(CURLOPT_NOPROGRESS)",       curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0));
+    ASSERT("curl_easy_setopt(CURLOPT_FOLLOWLOCATION)",   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1));
 
     ASSERT("curl_easy_perform", curl_easy_perform(curl));
 #undef ASSERT
