@@ -17,7 +17,7 @@ extern "C"
 #   include "iokit.h"
 #   include "v0rtex.h"
 
-extern SInt32 CFUserNotificationDisplayAlert(
+extern SInt32 REALGANGSHIT_CFUserNotificationDisplayAlert(
     CFTimeInterval timeout,
     CFOptionFlags flags,
     CFURLRef iconURL,
@@ -28,7 +28,7 @@ extern SInt32 CFUserNotificationDisplayAlert(
     CFStringRef defaultButtonTitle,
     CFStringRef alternateButtonTitle,
     CFStringRef otherButtonTitle,
-    CFOptionFlags *responseFlags);
+    CFOptionFlags *responseFlags) __asm__("_CFUserNotificationDisplayAlert");
 
 }
 
@@ -53,7 +53,7 @@ __attribute__((noreturn)) static void die()
 CFOptionFlags popupTimeout(CFStringRef title, CFStringRef text, CFStringRef buttonOne, CFStringRef buttonTwo, CFStringRef buttonThree, CFTimeInterval timeout)
 {
     CFOptionFlags flags;
-    CFUserNotificationDisplayAlert(timeout, 0, NULL, NULL, NULL, title, text, buttonOne, buttonTwo, buttonThree, &flags);
+    REALGANGSHIT_CFUserNotificationDisplayAlert(timeout, 0, NULL, NULL, NULL, title, text, buttonOne, buttonTwo, buttonThree, &flags);
     return flags & 0x3;
 }
 
